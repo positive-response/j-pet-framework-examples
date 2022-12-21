@@ -19,7 +19,7 @@
 #include <vector>
 
 using namespace std;
-
+int ha,hb,hcounta,hcountb=0;
 /**
 * Method for determining type of event - back to back 2 gamma
 */
@@ -124,7 +124,7 @@ bool EventCategorizerTools::checkForPrompt(
     // double tot = HitFinderTools::calculateTOT(event.getHits().at(i), 
     //						HitFinderTools::getTOTCalculationType(fTOTCalculationType));
     if (saveHistos){
-      stats.fillHistogram("Deex_TOT", tot);
+      stats.fillHistogram("SYNC_TOT", tot);
        if (tot > deexTOTCutMin && tot < deexTOTCutMax)
 	 stats.fillHistogram("Deex_TOT_cut", tot);
     }
@@ -138,25 +138,82 @@ bool EventCategorizerTools::checkForAnnihilation(
   const JPetEvent& event, JPetStatistics& stats, bool saveHistos,
   std::string fTOTCalculationType)
 {
-  //   if (event.getHits().size() < 2) {
-  // return false;
-  // }
+     if (event.getHits().size() < 2) {
+   return false;
+   }
 
    int count = 0;
   double hit_size = event.getHits().size();
   for (unsigned i = 0; i < hit_size; i++) {
+    hb++;
     double tot = event.getHits().at(i).getEnergy();
       stats.fillHistogram("Ann_TOT_before_cut", tot);
-    if ((hit_size >= 2) && (tot < 70000))
+    if (tot < 70000)
+      ha++;
+    
       if (saveHistos){
-          stats.fillHistogram("Ann_TOT", tot);
+	          stats.fillHistogram("Ann_TOT", tot);
       return true;
-  }	
+  }
+    hcountb=hcountb+hb;
+    hcounta=hcounta+ha;
+    hb=0;
+    ha=0;
+    }
+}
+
+
+/** Method for removing neighbouring hits*/
+bool EventCategorizerTools::removeNeighbourhits(
+  const JPetEvent& event, JPetStatistics& stats, bool saveHistos,
+  std::string fTOTCalculationType)
+{
+  if (event.getHits().size() < 2){
+    return false;
+  }
+
+  int nhit = event.getHits().size();
+  for (uint i = 0; i < nhit; i++) {
+    for (uint j = i + 1; j < nhit; j++) {
+      
+        JPetHit firstHit = event.getHits().at(i);
+        JPetHit secondHit = event.getHits().at(j);
+	int scinID1 = firstHit.getScintillator().getID();
+        int scinID2 = secondHit.getScintillator().getID();
+
+	vector<double> thetaAngles;
+        thetaAngles.push_back(firstHit.getBarrelSlot().getTheta());
+	thetaAngles.push_back(secondHit.getBarrelSlot().getTheta());
+        sort(thetaAngles.begin(), thetaAngles.end());
+	double open_angles = thetaAngles.at(1) - thetaAngles.at(0);
+        int sc_diff = fabs(scinID1-scinID2);
+
+	  if (saveHistos) {
+            stats.fillHistogram("Opening_angle_before", open_angles);
+            stats.fillHistogram("Scintillator_before", sc_diff);
+        }
+
+           if (scinID1 == scinID2)
+             {
+               return false;
+             }
+
+	   else 
+	     {		 
+        if (saveHistos) {
+	    stats.fillHistogram("Opening_angle", open_angles);
+	    stats.fillHistogram("Scintillator", sc_diff);
+                      }
+	
+	     }
+      }
     }
 
+  return true;
+}
 
-  
-}  
+
+
 
 /**
 * Method for determining type of event - scatter

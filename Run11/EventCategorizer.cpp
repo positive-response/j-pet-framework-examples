@@ -22,9 +22,9 @@
 using namespace jpet_options_tools;
 using namespace std;
 
-int counta = 0;
-int countb = 0;
-int countc = 0;
+int a, counta = 0;
+int b, countb = 0;
+
 EventCategorizer::EventCategorizer(const char* name): JPetUserTask(name) {}
 
 EventCategorizer::~EventCategorizer() {}
@@ -96,10 +96,10 @@ bool EventCategorizer::exec()
 {
   if (auto& timeWindow = dynamic_cast<const JPetTimeWindow* const>(fEvent)) {
     vector<JPetEvent> events;
-    countc = timeWindow->getNumberOfEvents();
+   
     for (uint i = 0; i < timeWindow->getNumberOfEvents(); i++) {
       const auto& event = dynamic_cast<const JPetEvent&>(timeWindow->operator[](i));
-      countb++;
+      b++;
       // Check types of current event
       bool is2Gamma = EventCategorizerTools::checkFor2Gamma(
         event, getStatistics(), fSaveControlHistos, fB2BSlotThetaDiff, fMaxTimeDiff
@@ -118,6 +118,11 @@ bool EventCategorizer::exec()
 	event, getStatistics(), fSaveControlHistos, fTOTCalculationType
       );
 
+      bool isNeighbourHits = EventCategorizerTools::removeNeighbourhits(
+	event, getStatistics(),fSaveControlHistos, fTOTCalculationType
+      );
+
+
       double sum_tot=0.0;
       double sum_tot_2g= 0.0;
       double sum_tot_3g=0.0;
@@ -133,11 +138,16 @@ bool EventCategorizer::exec()
       if(isPrompt) newEvent.addEventType(JPetEventType::kPrompt);
       if(isScattered) newEvent.addEventType(JPetEventType::kScattered);
       //      if(isAnnihilation) newEvent.addEventType(JPetEventType::kAnnihilation);
-      if(isAnnihilation) counta++;
+      if(isAnnihilation) a++;
+      if(isNeighbourHits);
 
       if(fSaveControlHistos){
         for(auto hit : event.getHits()){
 	  double tot = hit.getEnergy();
+	  double hit_pos = hit.getPos().Mag();
+	  double hit_time = hit.getTime();
+	  double hit_timediff = fabs(hit_time - hit_pos/ kLightVelocity_cm_ps);
+	  
 	  sum_tot = sum_tot+tot;
 	  
 	  if(is2Gamma)
@@ -174,21 +184,32 @@ bool EventCategorizer::exec()
             {
               sum_tot_3gann_prompt +=tot;
             }
+
+	   //Filling of sum TOT
 	   
-            getStatistics().fillHistogram("sum_tot_2g", sum_tot_2g);
-            getStatistics().fillHistogram("sum_tot_3g", sum_tot_3g);
-            getStatistics().fillHistogram("sum_tot_ann", sum_tot_ann);
-	    getStatistics().fillHistogram("sum_tot_prompt", sum_tot_prompt);
-	    getStatistics().fillHistogram("sum_tot_scatter", sum_tot_scatter);
-	    getStatistics().fillHistogram("sum_tot_ann_prompt", sum_tot_ann_prompt);
-	    getStatistics().fillHistogram("sum_tot_3gann_prompt", sum_tot_3gann_prompt);
-            getStatistics().fillHistogram("sum_tot", sum_tot);
+            getStatistics().fillHistogram("sum_TOT_2g", sum_tot_2g);
+            getStatistics().fillHistogram("sum_TOT_3g", sum_tot_3g);
+            getStatistics().fillHistogram("sum_TOT_ann", sum_tot_ann);
+	    getStatistics().fillHistogram("sum_TOT_prompt", sum_tot_prompt);
+	    getStatistics().fillHistogram("sum_TOT_scatter", sum_tot_scatter);
+	    getStatistics().fillHistogram("sum_TOT_ann_prompt", sum_tot_ann_prompt);
+	    getStatistics().fillHistogram("sum_TOT_3gann_prompt", sum_tot_3gann_prompt);
+            getStatistics().fillHistogram("sum_TOT", sum_tot);
+
+	    ////////
+	    
             getStatistics().fillHistogram("All_XYpos", hit.getPosX(), hit.getPosY());
+            getStatistics().fillHistogram("Hit_timedifference", hit_timediff);
+
+	    
         }
       }
       events.push_back(newEvent);
+      
     }
-    counta+=counta;
+    countb=countb+b;
+    counta=counta+a;
+    b=0; a=0;
     saveEvents(events);
   }
   else { return false; }
@@ -201,7 +222,9 @@ bool EventCategorizer::terminate()
   INFO("Event categorization completed.");
   cout<<"number of events before categorization:"<<countb<<endl;
   cout<<"number of events after categorization:"<<counta<<endl;
- cout<<"number of events for check:"<<countc<<endl;
+  //  cout<<"hit_before:"<<hcountb<<endl;
+  // cout<<"hit_after:"<<hcounta<<endl;
+ 
   return true;
 }
 
@@ -217,41 +240,47 @@ void EventCategorizer::initialiseHistograms(){
     new TH2D("All_XYpos", "Hit position XY", 240, -60.25, 59.75, 240, -60.25, 59.75),
     "Hit X position [cm]", "Hit Y position [cm]"
   );
+
+
+  // Histograms for sum TOT
   
   getStatistics().createHistogramWithAxes(
-  					  new TH1D("sum_tot_2g","Sum of all 2gamma tot", 200, 0, 100000),
+  					  new TH1D("sum_TOT_2g","Sum of all 2gamma TOT", 200, 0, 100000),
   					  "SUM_TOT_2g(ps)","counts");
   getStatistics().createHistogramWithAxes(
-                                          new TH1D("sum_tot_3g","Sum of all 3gamma tot", 200, 0, 100000),
+                                          new TH1D("sum_TOT_3g","Sum of all 3gamma TOT", 200, 0, 100000),
                                           "SUM_TOT_3g(ps)","counts");
   getStatistics().createHistogramWithAxes(
-                                          new TH1D("sum_tot_ann","Sum of all annhilations tot", 400, 0, 200000),
+                                          new TH1D("sum_TOT_ann","Sum of all annhilations TOT(2Gamma and 3Gamma)", 400, 0, 200000),
                                           "SUM_TOT_annhilation(ps)","counts");
   getStatistics().createHistogramWithAxes(
-                                          new TH1D("sum_tot_prompt","Sum of all ptompt tot", 200, 0, 200000),
+                                          new TH1D("sum_TOT_prompt","Sum of all ptompt TOT", 200, 0, 200000),
                                           "SUM_TOT_prompt(ps)","counts");
   getStatistics().createHistogramWithAxes(
-                                          new TH1D("sum_tot","Sum of all tot", 400, 0, 200000),
+                                          new TH1D("sum_TOT","Sum of all TOT", 400, 0, 200000),
                                           "SUM_TOT(ps)","counts");
   getStatistics().createHistogramWithAxes(
-                                          new TH1D("sum_tot_scatter","Sum of all scattered tot", 400, 0, 200000),
+                                          new TH1D("sum_TOT_scatter","Sum of all scattered TOT", 400, 0, 200000),
                                           "SUM_TOT_scatter(ps)","counts");
   getStatistics().createHistogramWithAxes(
-                                          new TH1D("sum_tot_ann_prompt","Sum of all annhilation and prompt tot", 400, 0, 200000),
+                                          new TH1D("sum_TOT_ann_prompt","Sum of all annhilation and prompt TOT", 400, 0, 200000),
                                           "SUM_TOT_ann_prompt(ps)","counts");
   getStatistics().createHistogramWithAxes(
-                                          new TH1D("sum_tot_3gann_prompt","Sum of all 3gamma and prompt tot", 400, 0, 200000),
+                                          new TH1D("sum_TOT_3gann_prompt","Sum of all 3gamma and prompt TOT", 400, 0, 200000),
                                           "SUM_TOT_3g_prompt(ps)","counts");
 
-  getStatistics().createHistogramWithAxes(
-    new TH1D("Ann_TOT", "TOT of all hits", 200, -100.0, 200000.0),
+  //For mew category checkForAnnihilation
+
+ getStatistics().createHistogramWithAxes(
+    new TH1D("Ann_TOT_before_cut", "TOT of all hits before cut", 200, -100.0, 200000.0),
     "TOT [ps]", "Number of Hits"
   );
 
-   getStatistics().createHistogramWithAxes(
-    new TH1D("Ann_TOT_before_cut", "TOT of all hits", 200, -100.0, 200000.0),
+  
+  getStatistics().createHistogramWithAxes(
+    new TH1D("Ann_TOT", "TOT of all hits after cut", 200, -100.0, 200000.0),
     "TOT [ps]", "Number of Hits"
-  );
+   );
 
   
  
@@ -266,12 +295,12 @@ void EventCategorizer::initialiseHistograms(){
     new TH1D("2Gamma_DLOR", "Delta LOR distance", 100, -0.25, 49.25),
     "Delta LOR [cm]", "Counts"
   );
-
+  //Newly added
   getStatistics().createHistogramWithAxes(
-    new TH1D("2Gamma_absThetaDiff","Abs angle difference of 2 gamma hits ", 180, 0, 180),
+    new TH1D("2Gamma_absThetaDiff","Absolute angle difference of 2 gamma hits ", 180, 0, 180),
     "Hits theta diff [deg]", "Counts"
    );
-
+  /////////
   getStatistics().createHistogramWithAxes(
     new TH1D("2Gamma_ThetaDiff", "Angle difference of 2 gamma hits ", 180, -0.5, 180.5),
     "Hits theta diff [deg]", "Counts"
@@ -281,17 +310,17 @@ void EventCategorizer::initialiseHistograms(){
     new TH1D("2Gamma_TimeDiff", "Time difference of 2 gamma hits", 6, -50.0, 1600.0),
     "Time Difference [ps]", "Number of Hit Pairs"
   );
-
+  //Newly added
   getStatistics().createHistogramWithAxes(
-    new TH1D("2Gamma_ThetaDiff_after", "Angle difference of 2 gamma hits ", 180, -0.5, 180.5),
+    new TH1D("2Gamma_ThetaDiff_after", "Angle difference of 2 gamma hits after cut ", 180, -0.5, 180.5),
     "Hits theta diff [deg]", "Counts"
   );
 
   getStatistics().createHistogramWithAxes(
-    new TH1D("2Gamma_TimeDiff_after", "Time difference of 2 gamma hits", 6, -50.0, 1600.0),
+    new TH1D("2Gamma_TimeDiff_after", "Time difference of 2 gamma hits after cut", 6, -50.0, 1600.0),
     "Time Difference [ps]", "Number of Hit Pairs"
   );
-
+  //////
 
   getStatistics().createHistogramWithAxes(
     new TH1D("2Gamma_Dist", "B2B hits distance", 150, -0.5, 149.5),
@@ -349,14 +378,42 @@ void EventCategorizer::initialiseHistograms(){
   );
 
   // Histograms for deexcitation
+  //New
   getStatistics().createHistogramWithAxes(
-    new TH1D("Deex_TOT", "TOT of all hits", 200, -100.0, 200000.0),
+    new TH1D("SYNC_TOT", "TOT of all hits at event level", 200, -100.0, 200000.0),
     "TOT [ps]", "Number of Hits"
   );
-
+  ///
   getStatistics().createHistogramWithAxes(
     new TH1D("Deex_TOT_cut", "TOT of all hits with deex cut", 200, 85000.0, 140000.0),
     "TOT [ps]", "Number of Hits"
+  );
+
+  // Histogram for time differences between hit time and calculated hit time
+  getStatistics().createHistogramWithAxes(
+    new TH1D("Hit_timedifference", "Time difference of hit", 100, -50.0, 3000.0),
+    "Time Difference [ps]", "counts"
+  );
+
+  //histogram for openingangles and scintillator corellation
+  getStatistics().createHistogramWithAxes(
+    new TH1D("Opening_angle_before", "opening angles between 2 hits before cut", 180, 0, 180),
+    "Angle", "Number of Hit"
+  );
+
+ getStatistics().createHistogramWithAxes(
+    new TH1D("Scintillator_before", "Difference in Scintillator ID before cut", 200, 0, 200),
+    "Difference", "number of hits"
+  );
+
+getStatistics().createHistogramWithAxes(
+    new TH1D("Opening_angle", "opening angles between 2 hits", 180, 0, 180),
+    "Angle", "Number of Hit"
+  );
+
+ getStatistics().createHistogramWithAxes(
+    new TH1D("Scintillator", "Difference in Scintillator ID", 200, 0, 200),
+    "Difference", "number of hits"
   );
 
 
