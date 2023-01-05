@@ -17,6 +17,7 @@
 #include "HitFinderTools.h"
 #include <TMath.h>
 #include <vector>
+#include <tuple>
 
 using namespace std;
 int ha,hb,hcounta,hcountb=0;
@@ -120,9 +121,7 @@ bool EventCategorizerTools::checkForPrompt(
   double deexTOTCutMin, double deexTOTCutMax, std::string fTOTCalculationType)
 {
   for (unsigned i = 0; i < event.getHits().size(); i++) {
-    double tot = event.getHits().at(i).getEnergy();
-    // double tot = HitFinderTools::calculateTOT(event.getHits().at(i), 
-    //						HitFinderTools::getTOTCalculationType(fTOTCalculationType));
+    double tot = event.getHits().at(i).getEnergy();					    
     if (saveHistos){
       stats.fillHistogram("SYNC_TOT", tot);
        if (tot > deexTOTCutMin && tot < deexTOTCutMax)
@@ -134,33 +133,33 @@ bool EventCategorizerTools::checkForPrompt(
 }
 
 /** Method for determining type of event - Annihilation*/
-bool EventCategorizerTools::checkForAnnihilation(
-  const JPetEvent& event, JPetStatistics& stats, bool saveHistos,
-  std::string fTOTCalculationType)
+std::tuple<int, int, bool> EventCategorizerTools::checkForAnnihilation(
+  const JPetEvent& event, JPetStatistics& stats, bool saveHistos)
 {
-     if (event.getHits().size() < 2) {
-   return false;
-   }
 
-   int count = 0;
-  double hit_size = event.getHits().size();
-  for (unsigned i = 0; i < hit_size; i++) {
-    hb++;
-    double tot = event.getHits().at(i).getEnergy();
-      stats.fillHistogram("Ann_TOT_before_cut", tot);
-    if (tot < 70000)
-      ha++;
-    
-      if (saveHistos){
-	          stats.fillHistogram("Ann_TOT", tot);
-      return true;
-  }
+  if (event.getHits().size() < 2) {
+       return std::make_tuple(hcountb, hcounta, false);
+   }
+  for (unsigned i = 0; i < event.getHits().size(); i++) {
+       hb++;
+       double tot = event.getHits().at(i).getEnergy();
+     if (saveHistos){stats.fillHistogram("Ann_TOT_before_cut", tot);}
+
+     if (tot > 65000) {
+      return std::make_tuple(hcountb, hcounta, false);
+    }
+
+    if (saveHistos){ 
+      stats.fillHistogram("Ann_TOT", tot);
+      ha++;}
     hcountb=hcountb+hb;
     hcounta=hcounta+ha;
     hb=0;
     ha=0;
     }
+  return std::make_tuple(hcountb, hcounta, true);
 }
+
 
 
 /** Method for removing neighbouring hits*/
@@ -172,6 +171,8 @@ bool EventCategorizerTools::removeNeighbourhits(
     return false;
   }
 
+  else if (event.getHits().size() == 2)
+    {
   int nhit = event.getHits().size();
   for (uint i = 0; i < nhit; i++) {
     for (uint j = i + 1; j < nhit; j++) {
@@ -181,36 +182,93 @@ bool EventCategorizerTools::removeNeighbourhits(
 	int scinID1 = firstHit.getScintillator().getID();
         int scinID2 = secondHit.getScintillator().getID();
 
-	vector<double> thetaAngles;
-        thetaAngles.push_back(firstHit.getBarrelSlot().getTheta());
-	thetaAngles.push_back(secondHit.getBarrelSlot().getTheta());
-        sort(thetaAngles.begin(), thetaAngles.end());
-	double open_angles = thetaAngles.at(1) - thetaAngles.at(0);
-        int sc_diff = fabs(scinID1-scinID2);
-
-	  if (saveHistos) {
+	int sc_diff = fabs(scinID1-scinID2);
+	//	double distance = fabs((firstHit.getPos() - secondHit.getPos()).Mag());
+	double time = fabs((firstHit.getTime()-secondHit.getTime()));
+   
+	TVector3 v1 = firstHit.getPos();
+	TVector3 v2 = secondHit.getPos();
+	double open_angles = TMath::RadToDeg() * v1.Angle(v2);
+	 
+       double dx = v2.X()-v1.X();
+       double dy = v2.Y()-v1.Y();
+       double dz = v2.Z()-v1.Z();
+              double distance = sqrt(dx * dx + dy * dy + dz * dz);
+	      // double distance = fabs((v2-v1).Mag()); 
+	double del_time = fabs((distance/kLightVelocity_cm_ps) -time);
+	
+       	  if (saveHistos) {
             stats.fillHistogram("Opening_angle_before", open_angles);
-            stats.fillHistogram("Scintillator_before", sc_diff);
-        }
+            stats.fillHistogram("Scintillator_before", sc_diff);  
+	    stats.fillHistogram("opening_angle_Vs_distance_before", open_angles, distance);
+	    stats.fillHistogram("opening_angle_Vs_z_before", open_angles, dz);
+	    stats.fillHistogram("delta_time_before", del_time);
 
-           if (scinID1 == scinID2)
-             {
-               return false;
-             }
 
-	   else 
-	     {		 
+	  }
+
+           if (scinID1 == scinID2)  {return false;}
+	   else  {		 
         if (saveHistos) {
 	    stats.fillHistogram("Opening_angle", open_angles);
 	    stats.fillHistogram("Scintillator", sc_diff);
-                      }
-	
-	     }
-      }
-    }
+	    stats.fillHistogram("opening_angle_Vs_distance", open_angles, distance);
+	    stats.fillHistogram("opening_angle_Vs_z", open_angles, dz);
+	    stats.fillHistogram("delta_time", del_time);
 
-  return true;
-}
+	}	
+	     }
+    }
+  }//for loop for 2 hits ends here
+         return true;
+    }//2 hits check ends here
+  
+ else if (event.getHits().size() == 3)
+    {
+        int nhit = event.getHits().size();
+        for (unsigned i = 0; i < nhit; i++) {
+             double tot = event.getHits().at(i).getEnergy();
+              if (tot < 90000){
+
+                  for (uint i = 0; i < nhit; i++) {
+                      for (uint j = i + 1; j < nhit; j++) {
+                         for (uint k = j + 1; k < nhit; k++) {
+                               JPetHit hit1 = event.getHits().at(i);
+                               JPetHit hit2 = event.getHits().at(j);
+                               JPetHit hit3 = event.getHits().at(k);
+
+			       
+
+                               vector<double> Angles;
+                               Angles.push_back(hit1.getBarrelSlot().getTheta());
+                               Angles.push_back(hit2.getBarrelSlot().getTheta());
+                               Angles.push_back(hit3.getBarrelSlot().getTheta());
+                               sort(Angles.begin(), Angles.end());
+
+                               vector<double> relAngles;
+                               relAngles.push_back(Angles.at(1) - Angles.at(0));
+                               relAngles.push_back(Angles.at(2) - Angles.at(1));
+                               relAngles.push_back(360.0 - Angles.at(2) + Angles.at(0));
+                               sort(relAngles.begin(), relAngles.end());
+
+                               TVector3 vec1 = hit2.getPos() - hit1.getPos();
+	                       TVector3 vec2 = hit3.getPos() - hit1.getPos();
+                               TVector3 cross = vec1.Cross(vec2);
+        if (cross.Mag() == 0) {
+	  if (saveHistos) {
+            for (auto angle : relAngles) {
+        stats.fillHistogram("Opening_angle_3", angle); }
+	    }
+	  }
+	 else {return false;}//cross product is non zero  
+	}
+      }
+		      //     else {return false;}//cross product is non zero
+    }
+  }
+	      }// 3 for loop ends here
+	      return true; } // tot check ends here
+	return true;} // 3 hit checks end here
 
 
 

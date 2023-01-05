@@ -18,13 +18,14 @@
 #include "EventCategorizerTools.h"
 #include "EventCategorizer.h"
 #include <iostream>
+#include <tuple>
 
 using namespace jpet_options_tools;
 using namespace std;
 
-int a, counta = 0;
-int b, countb = 0;
-
+int ann_a,ann_counta = 0;
+int ann_b, ann_countb = 0;
+int hcountb2, hcounta2=0;
 EventCategorizer::EventCategorizer(const char* name): JPetUserTask(name) {}
 
 EventCategorizer::~EventCategorizer() {}
@@ -99,14 +100,19 @@ bool EventCategorizer::exec()
    
     for (uint i = 0; i < timeWindow->getNumberOfEvents(); i++) {
       const auto& event = dynamic_cast<const JPetEvent&>(timeWindow->operator[](i));
-      b++;
+    ann_b++;
+     getStatistics().fillHistogram("Hit_multiplicity", event.getHits().size());
+
+   
+    
       // Check types of current event
-      bool is2Gamma = EventCategorizerTools::checkFor2Gamma(
+     /*      bool is2Gamma = EventCategorizerTools::checkFor2Gamma(
         event, getStatistics(), fSaveControlHistos, fB2BSlotThetaDiff, fMaxTimeDiff
       );
       bool is3Gamma = EventCategorizerTools::checkFor3Gamma(
         event, getStatistics(), fSaveControlHistos
-      );
+	);*/
+     bool is2Gamma,is3Gamma;
       bool isPrompt = EventCategorizerTools::checkForPrompt(
         event, getStatistics(), fSaveControlHistos, fDeexTOTCutMin, fDeexTOTCutMax, fTOTCalculationType
       );
@@ -114,13 +120,18 @@ bool EventCategorizer::exec()
         event, getStatistics(), fSaveControlHistos, fScatterTOFTimeDiff, fTOTCalculationType
       );
 
-      bool isAnnihilation = EventCategorizerTools::checkForAnnihilation(
-	event, getStatistics(), fSaveControlHistos, fTOTCalculationType
-      );
+     std::tuple<int, int, bool> isAnn = EventCategorizerTools::checkForAnnihilation(
+       event, getStatistics(), fSaveControlHistos);
+
 
       bool isNeighbourHits = EventCategorizerTools::removeNeighbourhits(
 	event, getStatistics(),fSaveControlHistos, fTOTCalculationType
       );
+
+     hcountb2 = std::get<0>(isAnn);
+     hcounta2 = std::get<1>(isAnn);
+     bool isAnnihilation = std::get<2>(isAnn);
+
 
 
       double sum_tot=0.0;
@@ -133,60 +144,46 @@ bool EventCategorizer::exec()
       double sum_tot_3gann_prompt=0.0;
       
       JPetEvent newEvent = event;
-      if(is2Gamma) newEvent.addEventType(JPetEventType::k2Gamma);
-      if(is3Gamma) newEvent.addEventType(JPetEventType::k3Gamma);
+       if(is2Gamma) newEvent.addEventType(JPetEventType::k2Gamma);
+       if(is3Gamma) newEvent.addEventType(JPetEventType::k3Gamma);
       if(isPrompt) newEvent.addEventType(JPetEventType::kPrompt);
       if(isScattered) newEvent.addEventType(JPetEventType::kScattered);
-      //      if(isAnnihilation) newEvent.addEventType(JPetEventType::kAnnihilation);
-      if(isAnnihilation) a++;
-      if(isNeighbourHits);
+      // if(isAnnihilation) newEvent.addEventType(JPetEventType::kAnnihilation);
+      if(isAnnihilation){
+	 ann_a++;
+	 is2Gamma = EventCategorizerTools::checkFor2Gamma(
+        event, getStatistics(), fSaveControlHistos, fB2BSlotThetaDiff, fMaxTimeDiff
+      );
+      is3Gamma = EventCategorizerTools::checkFor3Gamma(
+        event, getStatistics(), fSaveControlHistos
+      );
 
+
+	 
+      }
+      if(isNeighbourHits);
       if(fSaveControlHistos){
+	//	 getStatistics().fillHistogram("Hit_multiplicity", event.getHits().size());
+
         for(auto hit : event.getHits()){
 	  double tot = hit.getEnergy();
 	  double hit_pos = hit.getPos().Mag();
 	  double hit_time = hit.getTime();
 	  double hit_timediff = fabs(hit_time - hit_pos/ kLightVelocity_cm_ps);
+	  int scID = hit.getScintillator().getID();
+	  double Z = hit.getPosZ();
+
 	  
-	  sum_tot = sum_tot+tot;
-	  
-	  if(is2Gamma)
-	    {
-	      sum_tot_2g += tot;
-	    }
-	  
-	  if(is3Gamma)
-            {
-              sum_tot_3g += tot;
-            }
-	  
-	  if(is2Gamma || is3Gamma)
-            {
-              sum_tot_ann += tot;
-            }
+	  sum_tot += tot;
+	  if(is2Gamma) sum_tot_2g += tot;
+	  if(is3Gamma) sum_tot_3g += tot;	  
+	  if(is2Gamma || is3Gamma) sum_tot_ann += tot;      
+	  if(isPrompt) sum_tot_prompt += tot;
+	  if(isScattered) sum_tot_scatter += tot;
+	  if(!isScattered) sum_tot_ann_prompt += tot;
+	  if(is3Gamma || isPrompt) sum_tot_3gann_prompt +=tot;
 
-	  if(isPrompt)
-            {
-              sum_tot_prompt += tot;
-            }
-
-	  if(isScattered)
-            {
-              sum_tot_scatter += tot;
-            }
-
-	   if(!isScattered)
-            {
-              sum_tot_ann_prompt += tot;
-            }
-
-	   if(is3Gamma || isPrompt)
-            {
-              sum_tot_3gann_prompt +=tot;
-            }
-
-	   //Filling of sum TOT
-	   
+	     //Filling of sum TOT
             getStatistics().fillHistogram("sum_TOT_2g", sum_tot_2g);
             getStatistics().fillHistogram("sum_TOT_3g", sum_tot_3g);
             getStatistics().fillHistogram("sum_TOT_ann", sum_tot_ann);
@@ -197,9 +194,11 @@ bool EventCategorizer::exec()
             getStatistics().fillHistogram("sum_TOT", sum_tot);
 
 	    ////////
-	    
             getStatistics().fillHistogram("All_XYpos", hit.getPosX(), hit.getPosY());
             getStatistics().fillHistogram("Hit_timedifference", hit_timediff);
+	    getStatistics().fillHistogram("Z Vs scID", Z, scID);
+
+	  
 
 	    
         }
@@ -207,10 +206,11 @@ bool EventCategorizer::exec()
       events.push_back(newEvent);
       
     }
-    countb=countb+b;
-    counta=counta+a;
-    b=0; a=0;
-    saveEvents(events);
+   ann_countb = ann_countb+ann_b;
+   ann_counta = ann_counta+ann_a;
+   ann_b = 0; ann_a = 0;
+   
+   saveEvents(events);
   }
   else { return false; }
   return true;
@@ -220,8 +220,15 @@ bool EventCategorizer::exec()
 bool EventCategorizer::terminate()
 {
   INFO("Event categorization completed.");
-  cout<<"number of events before categorization:"<<countb<<endl;
-  cout<<"number of events after categorization:"<<counta<<endl;
+  // cout<<" hits before categorization:"<<hcountb2<<endl;
+  // cout<<" hits after categorization:"<<hcounta2<<endl;
+  //   cout<<" counts before categorization:"<<ann_countb<<endl;
+  //  cout<<" ann counts after categorization:"<<ann_counta<<endl;
+  //  cout<<" 3g counts after categorization:"<<threeg_counta<<endl;
+  //  cout<<" 2g counts after categorization:"<<twog_counta<<endl;
+
+   
+  //  cout<<"Event counter efficiency:"<<((counta/countb)*100)<<endl;
   //  cout<<"hit_before:"<<hcountb<<endl;
   // cout<<"hit_after:"<<hcounta<<endl;
  
@@ -240,6 +247,15 @@ void EventCategorizer::initialiseHistograms(){
     new TH2D("All_XYpos", "Hit position XY", 240, -60.25, 59.75, 240, -60.25, 59.75),
     "Hit X position [cm]", "Hit Y position [cm]"
   );
+
+  getStatistics().createHistogramWithAxes(
+                                          new TH1D("Hit_multiplicity","Multiplicity of hits", 10, 0.5, 10.5),
+                                          "No. of hits","counts");
+getStatistics().createHistogramWithAxes(
+    new TH2D("Z Vs scID", "Z Vs scID", 100, -50, 50, 200, 0, 200),
+    "Scintillator ID", "Hit Z position [cm]"
+  );
+
 
 
   // Histograms for sum TOT
@@ -391,7 +407,7 @@ void EventCategorizer::initialiseHistograms(){
 
   // Histogram for time differences between hit time and calculated hit time
   getStatistics().createHistogramWithAxes(
-    new TH1D("Hit_timedifference", "Time difference of hit", 100, -50.0, 3000.0),
+    new TH1D("Hit_timedifference", "Time difference of hit", 10000, -100.0, 21000000.0),
     "Time Difference [ps]", "counts"
   );
 
@@ -407,7 +423,7 @@ void EventCategorizer::initialiseHistograms(){
   );
 
 getStatistics().createHistogramWithAxes(
-    new TH1D("Opening_angle", "opening angles between 2 hits", 180, 0, 180),
+    new TH1D("Opening_angle", "opening angles between 2 hits", 180, 0, 360),
     "Angle", "Number of Hit"
   );
 
@@ -416,5 +432,45 @@ getStatistics().createHistogramWithAxes(
     "Difference", "number of hits"
   );
 
+
+ getStatistics().createHistogramWithAxes(
+    new TH2D("opening_angle_Vs_distance_before", "Opening Angle of hits vs. Distance between hits",
+    360, 0, 360, 200, 0, 200),
+    "Opening Angle", "Distance [cm]"
+   );
+   
+ getStatistics().createHistogramWithAxes(
+    new TH2D("opening_angle_Vs_distance", "Opening Angle of hits vs. Distance between hits",
+    360, 0, 360, 200, 0, 200),
+    "Opening angle", "Distance [cm]"
+  );
+
+ getStatistics().createHistogramWithAxes(
+    new TH2D("opening_angle_Vs_z_before", "Opening Angle of hits vs. z",
+    200, 0, 200, 160,-80, 80),
+    "Opening angle", "Distance [cm]"
+  );
+
+ getStatistics().createHistogramWithAxes(
+    new TH2D("opening_angle_Vs_z", "Opening Angle of hits vs. z",
+    200, 0, 200, 160, -80, 80),
+    "Opening angle", "Distance [cm]"
+  );
+
+
+ getStatistics().createHistogramWithAxes(
+    new TH1D("Opening_angle_3", "opening angles between 3 hits", 180, 0, 180),
+    "Angle", "Number of Hit"
+  );
+
+ getStatistics().createHistogramWithAxes(
+    new TH1D("delta_time_before", "Difference in time between 2 hits before cut", 500, 0, 30000),
+    "Difference in time", "counts"
+  );
+
+ getStatistics().createHistogramWithAxes(
+    new TH1D("delta_time", "Difference in time between 2 hits after cut", 500, 0, 30000),
+    "Difference in time", "counts"
+  );
 
 }
