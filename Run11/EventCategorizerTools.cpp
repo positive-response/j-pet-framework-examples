@@ -1,3 +1,4 @@
+
 /**
  *  @copyright Copyright 2020 The J-PET Framework Authors. All rights reserved.
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,17 +23,19 @@
 using namespace std;
 int ha,hb,hcounta,hcountb=0;
 /**
+
 * Method for determining type of event - back to back 2 gamma
 */
 bool EventCategorizerTools::checkFor2Gamma(
   const JPetEvent& event, JPetStatistics& stats, bool saveHistos,
-  double b2bSlotThetaDiff, double b2bTimeDiff
-)
+  double b2bSlotThetaDiff, double b2bTimeDiff)
 {
-  if (event.getHits().size() < 2) {
-    return false;
-  }
+  if (event.getHits().size() < 2) {return false;}
+  if (saveHistos)  stats.fillHistogram("Hit_multiplicity_2g", event.getHits().size());
   for (uint i = 0; i < event.getHits().size(); i++) {
+    double tot = event.getHits().at(i).getEnergy();
+    if (tot > 65000) {return false; }
+     stats.fillHistogram("simple_tot", tot);
     for (uint j = i + 1; j < event.getHits().size(); j++) {
       JPetHit firstHit, secondHit;
       if (event.getHits().at(i).getTime() < event.getHits().at(j).getTime()) {
@@ -42,13 +45,16 @@ bool EventCategorizerTools::checkFor2Gamma(
         firstHit = event.getHits().at(j);
         secondHit = event.getHits().at(i);
       }
+
       // Checking for back to back
+
       double timeDiff = fabs(firstHit.getTime() - secondHit.getTime());
       double deltaLor = (secondHit.getTime() - firstHit.getTime()) * kLightVelocity_cm_ps / 2.;
       double theta1 = min(firstHit.getBarrelSlot().getTheta(), secondHit.getBarrelSlot().getTheta());
       double theta2 = max(firstHit.getBarrelSlot().getTheta(), secondHit.getBarrelSlot().getTheta());
       double thetaDiff = min(theta2 - theta1, 360.0 - theta2 + theta1);
       double absthetadiff = fabs(thetaDiff - 180);
+      
       if (saveHistos) {
         stats.fillHistogram("2Gamma_Zpos", firstHit.getPosZ());
         stats.fillHistogram("2Gamma_Zpos", secondHit.getPosZ());
@@ -83,7 +89,10 @@ bool EventCategorizerTools::checkFor2Gamma(
 bool EventCategorizerTools::checkFor3Gamma(const JPetEvent& event, JPetStatistics& stats, bool saveHistos)
 {
   if (event.getHits().size() < 3) return false;
+  if (saveHistos) stats.fillHistogram("Hit_multiplicity_3g", event.getHits().size());
   for (uint i = 0; i < event.getHits().size(); i++) {
+    double tot = event.getHits().at(i).getEnergy();
+    if (tot > 65000) {return false; }
     for (uint j = i + 1; j < event.getHits().size(); j++) {
       for (uint k = j + 1; k < event.getHits().size(); k++) {
         JPetHit firstHit = event.getHits().at(i);
@@ -106,6 +115,7 @@ bool EventCategorizerTools::checkFor3Gamma(const JPetEvent& event, JPetStatistic
 
         if (saveHistos) {
           stats.fillHistogram("3Gamma_Angles", transformedX, transformedY);
+	  // stats.fillHistogram("Hit_multiplicity_3g", event.getHits().size());
         }
       }
     }
@@ -120,12 +130,15 @@ bool EventCategorizerTools::checkForPrompt(
   const JPetEvent& event, JPetStatistics& stats, bool saveHistos,
   double deexTOTCutMin, double deexTOTCutMax, std::string fTOTCalculationType)
 {
+
   for (unsigned i = 0; i < event.getHits().size(); i++) {
     double tot = event.getHits().at(i).getEnergy();					    
     if (saveHistos){
       stats.fillHistogram("SYNC_TOT", tot);
-       if (tot > deexTOTCutMin && tot < deexTOTCutMax)
+      if (tot > deexTOTCutMin && tot < deexTOTCutMax){
 	 stats.fillHistogram("Deex_TOT_cut", tot);
+	 stats.fillHistogram("Hit_multiplicity_prompt", event.getHits().size());
+          }
     }
     return true;
      }                                                                                 
@@ -136,10 +149,10 @@ bool EventCategorizerTools::checkForPrompt(
 std::tuple<int, int, bool> EventCategorizerTools::checkForAnnihilation(
   const JPetEvent& event, JPetStatistics& stats, bool saveHistos)
 {
-
   if (event.getHits().size() < 2) {
        return std::make_tuple(hcountb, hcounta, false);
    }
+  if (saveHistos)  stats.fillHistogram("Hit_multiplicity_ann", event.getHits().size());
   for (unsigned i = 0; i < event.getHits().size(); i++) {
        hb++;
        double tot = event.getHits().at(i).getEnergy();
@@ -173,6 +186,7 @@ bool EventCategorizerTools::removeNeighbourhits(
 
   else if (event.getHits().size() == 2)
     {
+      stats.fillHistogram("Hit_multiplicity_n2", event.getHits().size());
   int nhit = event.getHits().size();
   for (uint i = 0; i < nhit; i++) {
     for (uint j = i + 1; j < nhit; j++) {
@@ -183,8 +197,7 @@ bool EventCategorizerTools::removeNeighbourhits(
         int scinID2 = secondHit.getScintillator().getID();
 
 	int sc_diff = fabs(scinID1-scinID2);
-	//	double distance = fabs((firstHit.getPos() - secondHit.getPos()).Mag());
-	double time = fabs((firstHit.getTime()-secondHit.getTime()));
+  	double time = fabs((firstHit.getTime()-secondHit.getTime()));
    
 	TVector3 v1 = firstHit.getPos();
 	TVector3 v2 = secondHit.getPos();
@@ -193,17 +206,23 @@ bool EventCategorizerTools::removeNeighbourhits(
        double dx = v2.X()-v1.X();
        double dy = v2.Y()-v1.Y();
        double dz = v2.Z()-v1.Z();
-              double distance = sqrt(dx * dx + dy * dy + dz * dz);
-	      // double distance = fabs((v2-v1).Mag()); 
-	double del_time = fabs((distance/kLightVelocity_cm_ps) -time);
-	
-       	  if (saveHistos) {
+       // double distance = sqrt(dx * dx + dy * dy + dz * dz);
+       double distance = fabs((v2-v1).Mag());
+       double del_time = fabs((distance/kLightVelocity_cm_ps) -time);
+       double tot = event.getHits().at(i).getEnergy();
+       if (tot >65000) return false;
+
+	 if (tot < 65000){
+		if (saveHistos) {
             stats.fillHistogram("Opening_angle_before", open_angles);
             stats.fillHistogram("Scintillator_before", sc_diff);  
 	    stats.fillHistogram("opening_angle_Vs_distance_before", open_angles, distance);
 	    stats.fillHistogram("opening_angle_Vs_z_before", open_angles, dz);
+	    stats.fillHistogram("opening_angle_Vs_scinID1", open_angles, scinID1);
+	    stats.fillHistogram("opening_angle_Vs_scinID2", open_angles, scinID2);
 	    stats.fillHistogram("delta_time_before", del_time);
-
+	    stats.fillHistogram("scID Distribution", scinID1,scinID2,open_angles);
+	    stats.fillHistogram("scinID1_Vs_scinID2",scinID1, scinID2);
 
 	  }
 
@@ -217,7 +236,8 @@ bool EventCategorizerTools::removeNeighbourhits(
 	    stats.fillHistogram("delta_time", del_time);
 
 	}	
-	     }
+      }
+	      }
     }
   }//for loop for 2 hits ends here
          return true;
@@ -226,10 +246,11 @@ bool EventCategorizerTools::removeNeighbourhits(
  else if (event.getHits().size() == 3)
     {
         int nhit = event.getHits().size();
+	stats.fillHistogram("Hit_multiplicity_n3", event.getHits().size());
         for (unsigned i = 0; i < nhit; i++) {
              double tot = event.getHits().at(i).getEnergy();
-              if (tot < 90000){
-
+	     if (tot > 65000) return false;
+              if (tot < 65000){
                   for (uint i = 0; i < nhit; i++) {
                       for (uint j = i + 1; j < nhit; j++) {
                          for (uint k = j + 1; k < nhit; k++) {
