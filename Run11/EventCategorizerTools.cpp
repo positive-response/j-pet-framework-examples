@@ -30,13 +30,28 @@ bool EventCategorizerTools::checkFor2Gamma(
   const JPetEvent& event, JPetStatistics& stats, bool saveHistos,
   double b2bSlotThetaDiff, double b2bTimeDiff)
 {
-  if (event.getHits().size() < 2) {return false;}
-  if (saveHistos)  stats.fillHistogram("Hit_multiplicity_2g", event.getHits().size());
-  for (uint i = 0; i < event.getHits().size(); i++) {
+  if (event.getHits().size() < 2)
+    {
+      return false;
+    }
+
+  stats.fillHistogram("Hit_multiplicity_2g", event.getHits().size());
+  for (auto i = 0; i < event.getHits().size(); i++)
+    {
     double tot = event.getHits().at(i).getEnergy();
-    if (tot > 65000) {return false; }
-     stats.fillHistogram("simple_tot", tot);
-    for (uint j = i + 1; j < event.getHits().size(); j++) {
+    if (tot > 65000)
+      {
+	return false;
+      }
+    // stats.fillHistogram("simple_tot", tot);
+     if (fabs(event.getHits().at(i).getPosZ()) > 23)
+       {
+         return false;
+       }
+    }
+
+  for (auto i = 0; i < event.getHits().size(); i++){
+    for (auto j = i + 1; j < event.getHits().size(); j++) {
       JPetHit firstHit, secondHit;
       if (event.getHits().at(i).getTime() < event.getHits().at(j).getTime()) {
         firstHit = event.getHits().at(i);
@@ -73,14 +88,14 @@ bool EventCategorizerTools::checkFor2Gamma(
           stats.fillHistogram("AnnihPoint_ZY", annhilationPoint.Z(), annhilationPoint.Y());
           stats.fillHistogram("Annih_DLOR", deltaLor);
 	  stats.fillHistogram("2Gamma_TimeDiff_after", timeDiff / 1000.0);
-          stats.fillHistogram("2Gamma_ThetaDiff_after", thetaDiff);
-	  
+          stats.fillHistogram("2Gamma_ThetaDiff_after", thetaDiff);	  
         }
         return true;
       }
+     
     }
   }
-  return false;
+  return true;
 }
 
 /**
@@ -89,19 +104,32 @@ bool EventCategorizerTools::checkFor2Gamma(
 bool EventCategorizerTools::checkFor3Gamma(const JPetEvent& event, JPetStatistics& stats, bool saveHistos)
 {
   if (event.getHits().size() < 3) return false;
-  if (saveHistos) stats.fillHistogram("Hit_multiplicity_3g", event.getHits().size());
-  for (uint i = 0; i < event.getHits().size(); i++) {
+  stats.fillHistogram("Hit_multiplicity_3g", event.getHits().size());
+  
+  for (auto i = 0; i < event.getHits().size(); i++)
+    {      
     double tot = event.getHits().at(i).getEnergy();
-    if (tot > 65000) {return false; }
-    for (uint j = i + 1; j < event.getHits().size(); j++) {
-      for (uint k = j + 1; k < event.getHits().size(); k++) {
+    if (tot > 65000)
+      {
+	return false;
+      }
+    
+    if (fabs(event.getHits().at(i).getPosZ()) > 23)
+       {
+         return false;
+       }
+    }
+  
+    for (auto i = 0; i < event.getHits().size(); i++){
+      for (auto j = i + 1; j < event.getHits().size(); j++) {
+	for (auto k = j + 1; k < event.getHits().size(); k++) {
         JPetHit firstHit = event.getHits().at(i);
         JPetHit secondHit = event.getHits().at(j);
         JPetHit thirdHit = event.getHits().at(k);
 
         vector<double> thetaAngles;
         thetaAngles.push_back(firstHit.getBarrelSlot().getTheta());
-        thetaAngles.push_back(secondHit.getBarrelSlot().getTheta());
+        thetaAngles.push_back(secondHit.getBarrelSlot().getTheta()) ;
         thetaAngles.push_back(thirdHit.getBarrelSlot().getTheta());
         sort(thetaAngles.begin(), thetaAngles.end());
 
@@ -112,11 +140,11 @@ bool EventCategorizerTools::checkFor3Gamma(const JPetEvent& event, JPetStatistic
         sort(relativeAngles.begin(), relativeAngles.end());
         double transformedX = relativeAngles.at(1) + relativeAngles.at(0);
         double transformedY = relativeAngles.at(1) - relativeAngles.at(0);
-
+	
         if (saveHistos) {
           stats.fillHistogram("3Gamma_Angles", transformedX, transformedY);
-	  // stats.fillHistogram("Hit_multiplicity_3g", event.getHits().size());
-        }
+	}
+        
       }
     }
   }
@@ -131,44 +159,62 @@ bool EventCategorizerTools::checkForPrompt(
   double deexTOTCutMin, double deexTOTCutMax, std::string fTOTCalculationType)
 {
 
-  for (unsigned i = 0; i < event.getHits().size(); i++) {
-    double tot = event.getHits().at(i).getEnergy();					    
-    if (saveHistos){
-      stats.fillHistogram("SYNC_TOT", tot);
-      if (tot > deexTOTCutMin && tot < deexTOTCutMax){
+  for (auto i = 0; i < event.getHits().size(); i++) {
+    if(fabs(event.getHits().at(i).getPosZ()) > 23)
+      {
+        return false;
+      }
+ 
+    double tot = event.getHits().at(i).getEnergy();
+    stats.fillHistogram("SYNC_TOT", tot);
+    
+       
+    if (tot > deexTOTCutMin && tot < deexTOTCutMax){
+	if (saveHistos){
 	 stats.fillHistogram("Deex_TOT_cut", tot);
 	 stats.fillHistogram("Hit_multiplicity_prompt", event.getHits().size());
-          }
+	}
+	return true;
     }
-    return true;
-     }                                                                                 
-  return false;
+  }
+  return true;
 }
+
 
 /** Method for determining type of event - Annihilation*/
 std::tuple<int, int, bool> EventCategorizerTools::checkForAnnihilation(
   const JPetEvent& event, JPetStatistics& stats, bool saveHistos)
 {
-  if (event.getHits().size() < 2) {
-       return std::make_tuple(hcountb, hcounta, false);
-   }
-  if (saveHistos)  stats.fillHistogram("Hit_multiplicity_ann", event.getHits().size());
-  for (unsigned i = 0; i < event.getHits().size(); i++) {
-       hb++;
-       double tot = event.getHits().at(i).getEnergy();
-     if (saveHistos){stats.fillHistogram("Ann_TOT_before_cut", tot);}
-
-     if (tot > 65000) {
+  if (event.getHits().size() < 2)
+    {
       return std::make_tuple(hcountb, hcounta, false);
     }
-
-    if (saveHistos){ 
-      stats.fillHistogram("Ann_TOT", tot);
-      ha++;}
-    hcountb=hcountb+hb;
+ 
+  for (auto i = 0; i < event.getHits().size(); i++) {
+             
+       double tot = event.getHits().at(i).getEnergy();
+       stats.fillHistogram("Ann_TOT_before_cut", tot);
+       if (tot > 65000)
+	 {
+	   return std::make_tuple(hcountb, hcounta, false);
+	 }
+       
+       double z = fabs( event.getHits().at(i).getPosZ());
+       if (z > 23)
+	 {
+	   return std::make_tuple(hcountb, hcounta, false);
+	 }
+       
+     if (saveHistos)
+       {
+	 stats.fillHistogram("Ann_TOT", tot); 
+         stats.fillHistogram("Hit_multiplicity_ann", event.getHits().size());
+       }
+          
+  /* hcountb=hcountb+hb;
     hcounta=hcounta+ha;
     hb=0;
-    ha=0;
+    ha=0;*/
     }
   return std::make_tuple(hcountb, hcounta, true);
 }
@@ -180,117 +226,138 @@ bool EventCategorizerTools::removeNeighbourhits(
   const JPetEvent& event, JPetStatistics& stats, bool saveHistos,
   std::string fTOTCalculationType)
 {
-  if (event.getHits().size() < 2){
+  if (event.getHits().size() < 2)
+    {
     return false;
-  }
+    }
 
   else if (event.getHits().size() == 2)
+   {
+     
+  stats.fillHistogram("Hit_multiplicity_n2", event.getHits().size());
+  for (auto i = 0; i < 2; i++)
     {
-      stats.fillHistogram("Hit_multiplicity_n2", event.getHits().size());
-  int nhit = event.getHits().size();
-  for (uint i = 0; i < nhit; i++) {
-    for (uint j = i + 1; j < nhit; j++) {
-      
-        JPetHit firstHit = event.getHits().at(i);
-        JPetHit secondHit = event.getHits().at(j);
-	int scinID1 = firstHit.getScintillator().getID();
-        int scinID2 = secondHit.getScintillator().getID();
-
-	int sc_diff = fabs(scinID1-scinID2);
-  	double time = fabs((firstHit.getTime()-secondHit.getTime()));
-   
-	TVector3 v1 = firstHit.getPos();
-	TVector3 v2 = secondHit.getPos();
-	double open_angles = TMath::RadToDeg() * v1.Angle(v2);
-	 
-       double dx = v2.X()-v1.X();
-       double dy = v2.Y()-v1.Y();
-       double dz = v2.Z()-v1.Z();
-       // double distance = sqrt(dx * dx + dy * dy + dz * dz);
-       double distance = fabs((v2-v1).Mag());
-       double del_time = fabs((distance/kLightVelocity_cm_ps) -time);
        double tot = event.getHits().at(i).getEnergy();
-       if (tot >65000) return false;
+       if (tot > 65000)
+         return false;
+     }
 
-	 if (tot < 65000){
-		if (saveHistos) {
+     vector<JPetHit> hits = event.getHits();
+     if (fabs(hits[0].getPosZ()) > 23 && fabs(hits[1].getPosZ()) > 23)
+       {
+         return false;
+       }
+
+  JPetHit firstHit = event.getHits().at(0);
+  JPetHit secondHit = event.getHits().at(1);
+  int scinID1 = firstHit.getScintillator().getID();
+  int scinID2 = secondHit.getScintillator().getID();
+  TVector3 v1 = firstHit.getPos();
+  TVector3 v2 = secondHit.getPos();
+  int sc_diff = fabs(scinID1-scinID2);
+  double distance = fabs((v2-v1).Mag());
+  double open_angles = TMath::RadToDeg() * v1.Angle(v2);
+  double time = fabs((firstHit.getTime()-secondHit.getTime()));
+  double dx = v2.X()-v1.X();
+  double dy = v2.Y()-v1.Y();
+  double dz = v2.Z()-v1.Z();
+  double del_time = fabs((distance/kLightVelocity_cm_ps) -time);
+
+  if (saveHistos) {
             stats.fillHistogram("Opening_angle_before", open_angles);
-            stats.fillHistogram("Scintillator_before", sc_diff);  
-	    stats.fillHistogram("opening_angle_Vs_distance_before", open_angles, distance);
-	    stats.fillHistogram("opening_angle_Vs_z_before", open_angles, dz);
-	    stats.fillHistogram("opening_angle_Vs_scinID1", open_angles, scinID1);
-	    stats.fillHistogram("opening_angle_Vs_scinID2", open_angles, scinID2);
-	    stats.fillHistogram("delta_time_before", del_time);
-	    stats.fillHistogram("scID Distribution", scinID1,scinID2,open_angles);
-	    stats.fillHistogram("scinID1_Vs_scinID2",scinID1, scinID2);
+            stats.fillHistogram("Scintillator_before", sc_diff);
+            stats.fillHistogram("opening_angle_Vs_distance_before", open_angles, distance);
+            stats.fillHistogram("opening_angle_Vs_z_before", open_angles, dz);
+            stats.fillHistogram("opening_angle_Vs_scinID1", open_angles, scinID1);
+            stats.fillHistogram("opening_angle_Vs_scinID2", open_angles, scinID2);
+            stats.fillHistogram("delta_time_before", del_time);
+            stats.fillHistogram("scID Distribution", scinID1,scinID2,open_angles);
+            stats.fillHistogram("scinID1_Vs_scinID2",scinID1, scinID2);
+            stats.fillHistogram("time_diff_Vs_distance_before", distance, del_time);
+          }
 
-	  }
-
-           if (scinID1 == scinID2)  {return false;}
-	   else  {		 
+  if (scinID1 == scinID2)  {return false;}
+           else  {
         if (saveHistos) {
-	    stats.fillHistogram("Opening_angle", open_angles);
-	    stats.fillHistogram("Scintillator", sc_diff);
-	    stats.fillHistogram("opening_angle_Vs_distance", open_angles, distance);
-	    stats.fillHistogram("opening_angle_Vs_z", open_angles, dz);
-	    stats.fillHistogram("delta_time", del_time);
+            stats.fillHistogram("Opening_angle", open_angles);
+            stats.fillHistogram("Scintillator", sc_diff);
+            stats.fillHistogram("opening_angle_Vs_distance", open_angles, distance);
+            stats.fillHistogram("opening_angle_Vs_z", open_angles, dz);
+            stats.fillHistogram("delta_time", del_time);
+            stats.fillHistogram("scID Distribution_after", scinID1,scinID2,open_angles);
+            stats.fillHistogram("time_diff_Vs_distance", distance, del_time);
+                }
+           }
+  return true;
 
-	}	
-      }
-	      }
-    }
-  }//for loop for 2 hits ends here
-         return true;
-    }//2 hits check ends here
   
+   }
+
+
  else if (event.getHits().size() == 3)
-    {
-        int nhit = event.getHits().size();
-	stats.fillHistogram("Hit_multiplicity_n3", event.getHits().size());
-        for (unsigned i = 0; i < nhit; i++) {
-             double tot = event.getHits().at(i).getEnergy();
-	     if (tot > 65000) return false;
-              if (tot < 65000){
-                  for (uint i = 0; i < nhit; i++) {
-                      for (uint j = i + 1; j < nhit; j++) {
-                         for (uint k = j + 1; k < nhit; k++) {
-                               JPetHit hit1 = event.getHits().at(i);
-                               JPetHit hit2 = event.getHits().at(j);
-                               JPetHit hit3 = event.getHits().at(k);
+   {
+     stats.fillHistogram("Hit_multiplicity_n3", event.getHits().size());
+     for (auto i = 0; i < 3; i++){
+       double tot = event.getHits().at(i).getEnergy();
+       if (tot > 65000)
+	 return false;
+     }
 
-			       
+     vector<JPetHit> hits = event.getHits();
+     if (fabs(hits[0].getPosZ()) > 23 && fabs(hits[1].getPosZ()) > 23 && fabs(hits[2].getPosZ()) > 23)
+       {
+	 return false;
+       }
+     
+     TVector3 v1 =  hits[0].getPos();
+     TVector3 v2 =  hits[1].getPos();
+     TVector3 v3 =  hits[2].getPos();
+     double t1 = hits[0].getTime();
+     double t2 = hits[1].getTime();
+     double t3 = hits[2].getTime();
 
-                               vector<double> Angles;
-                               Angles.push_back(hit1.getBarrelSlot().getTheta());
-                               Angles.push_back(hit2.getBarrelSlot().getTheta());
-                               Angles.push_back(hit3.getBarrelSlot().getTheta());
-                               sort(Angles.begin(), Angles.end());
+     vector<double> Angles;
+     Angles.push_back(TMath::RadToDeg() * v1.Angle(v2));
+     Angles.push_back(TMath::RadToDeg() * v2.Angle(v3));
+     Angles.push_back(TMath::RadToDeg() * v1.Angle(v3));
+     sort(Angles.begin(), Angles.end());
+     double theta_sum = Angles.at(1)+Angles.at(0);
+     double theta_diff = Angles.at(1)-Angles.at(0);
 
-                               vector<double> relAngles;
-                               relAngles.push_back(Angles.at(1) - Angles.at(0));
-                               relAngles.push_back(Angles.at(2) - Angles.at(1));
-                               relAngles.push_back(360.0 - Angles.at(2) + Angles.at(0));
-                               sort(relAngles.begin(), relAngles.end());
+     vector<double> dist;
+     vector<double> dt;
 
-                               TVector3 vec1 = hit2.getPos() - hit1.getPos();
-	                       TVector3 vec2 = hit3.getPos() - hit1.getPos();
-                               TVector3 cross = vec1.Cross(vec2);
-        if (cross.Mag() == 0) {
-	  if (saveHistos) {
-            for (auto angle : relAngles) {
-        stats.fillHistogram("Opening_angle_3", angle); }
-	    }
-	  }
-	 else {return false;}//cross product is non zero  
-	}
-      }
-		      //     else {return false;}//cross product is non zero
-    }
-  }
-	      }// 3 for loop ends here
-	      return true; } // tot check ends here
-	return true;} // 3 hit checks end here
+     for(auto i = 0; i<3; i++)
+       {
+	 for(auto j = i+1; j<3; j++)
+	   {
 
+	     double d =fabs((hits[i].getPos()-hits[j].getPos()).Mag());
+	     double t =fabs(hits[i].getTime()-hits[j].getTime());
+	     dist.push_back(d);
+	     dt.push_back(fabs((d/kLightVelocity_cm_ps) -t));
+	   }
+       }
+
+     if (saveHistos)
+       {
+	 stats.fillHistogram("qqq1", t3-t2);
+	 stats.fillHistogram("qqq2", t2-t1);
+	 stats.fillHistogram("qqq3", t3-t1);
+	 stats.fillHistogram("sum_diff_angle_dist", theta_sum,theta_diff);
+	 stats.fillHistogram("xyz1",dt.at(0),dist.at(0));
+	 stats.fillHistogram("xyz2",dt.at(1),dist.at(1));
+	 stats.fillHistogram("xyz3",dt.at(2),dist.at(2));
+	 stats.fillHistogram("t1",dt.at(0));
+	 stats.fillHistogram("t2",dt.at(1));
+	 stats.fillHistogram("t3",dt.at(2));
+	 stats.fillHistogram("d1",dist.at(0));
+
+       }
+     return true;
+   }
+
+}
 
 
 
@@ -304,8 +371,8 @@ bool EventCategorizerTools::checkForScatter(
   if (event.getHits().size() < 2) {
     return false;
   }
-  for (uint i = 0; i < event.getHits().size(); i++) {
-    for (uint j = i + 1; j < event.getHits().size(); j++) {
+  for (auto i = 0; i < event.getHits().size(); i++) {
+    for (auto j = i + 1; j < event.getHits().size(); j++) {
      JPetHit primaryHit, scatterHit;
       if (event.getHits().at(i).getTime() < event.getHits().at(j).getTime()) {
         primaryHit = event.getHits().at(i);
