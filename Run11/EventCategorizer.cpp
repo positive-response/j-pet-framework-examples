@@ -500,40 +500,39 @@ getStatistics().createHistogramWithAxes(
    );
 
   getStatistics().createHistogramWithAxes(
-    new TH2D("time_diff_Vs_distance_before", "time_diff_Vs_distance",
-	     500, 0, 30000,200, 0, 200),
-   "delta_t[ps]" , "Distance[cm]"
+    new TH2D("distance_vs_time_diff_before", "distance_vs_time_diff",
+	     150, 0, 150, 500, 0, 2500000),"Distance[cm]","delta_t[ps]"
   );
 
   getStatistics().createHistogramWithAxes(
-    new TH2D("time_diff_Vs_distance", "time_diff_Vs_distance",
-             500, 0, 5000, 150, 0, 150),
-   "delta_t[ps]" , "Distance[cm]"
+    new TH2D("distance_vs_time_diff", "distance_vs_time_diff",
+             150, 0, 150,500, 0, 2500000),
+    "Distance[cm]", "delta_t[ps]"
   );
 
   getStatistics().createHistogramWithAxes(
     new TH2D("sum_diff_angle_dist", "sum and difference of 2 smallest relative angles",
-             360, 0, 360, 200, 0, 200),
+             250, 0, 250, 200, 0, 200),
    "#theta_{1}+#theta_{2}[degree]" , "#theta_{1}-#theta_{2}[degree]"
   );
 
 
   getStatistics().createHistogramWithAxes(
-    new TH2D("xyz1", "time_diff_Vs_distance",
-             250, 0, 1000000,150, 0, 150),
-   "delta_t[ps]" , "Distance[cm]"
+    new TH2D("xyz1", "distance_vs_time_diff(pair1)",
+             150, 0, 150,250, 0, 1000000),
+    "Distance[cm]","delta_t[ps]"
   );
     
 getStatistics().createHistogramWithAxes(
-    new TH2D("xyz2", "time_diff_Vs_distance",
-             250, 0, 1000000,150, 0, 150),
-   "delta_t[ps]" , "Distance[cm]"
+    new TH2D("xyz2", "distance_vs_time_diff(pair2)",
+             150, 0, 150,250, 0, 1000000),
+    "Distance[cm]","delta_t[ps]"
   );
 
  getStatistics().createHistogramWithAxes(
-    new TH2D("xyz3", "time_diff_Vs_distance",
-             250, 0, 1000000,200, 0, 200),
-   "delta_t[ps]" , "Distance[cm]"
+    new TH2D("xyz3", "distance_vs_time_diff(pair3)",
+             150,0,150,250, 0, 1000000),
+    "Distance[cm]","delta_t[ps]"
   );
 
      getStatistics().createHistogramWithAxes(
@@ -549,22 +548,21 @@ getStatistics().createHistogramWithAxes(
   "Time_difference_between_hits[ps]","counts"
    );
 
-     getStatistics().createHistogramWithAxes(
-   new TH1D("d1","dist", 150, 0, 150),
-  "Distance_between_hits[cm]","counts"
-   );
+     /*     getStatistics().createHistogramWithAxes(
+   new TH2D("xy","scatter_test", 250, 0, 1700000,250, 0, 1700000),"1","2"
+   );*/
 
      getStatistics().createHistogramWithAxes(
-					     new TH1D("qqq1","time1", 100, 0, 15000),
-					     "#delta_t_between_hits","counts" );
+    new TH1D("hit_order1","time(t3-t2)", 100, 0, 15000),
+    "#deltat_between_hits","counts" );
 
      getStatistics().createHistogramWithAxes(
-   new TH1D("qqq2","time2", 100, 0, 15000),
-  "#delta_t_between_hits","counts"
+   new TH1D("hit_order2","time(t2-t1)", 100, 0, 15000),
+  "#deltat_between_hits","counts"
    );
 getStatistics().createHistogramWithAxes(
-   new TH1D("qqq3","time3", 100, 0, 15000),
-  "#delta_t_between_hits[cm]","counts"
+   new TH1D("hit_order3","time(t3-t1)", 100, 0, 15000),
+  "#deltat_between_hits[cm]","counts"
    );
 
 

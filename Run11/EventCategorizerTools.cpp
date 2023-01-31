@@ -257,11 +257,11 @@ bool EventCategorizerTools::removeNeighbourhits(
   int sc_diff = fabs(scinID1-scinID2);
   double distance = fabs((v2-v1).Mag());
   double open_angles = TMath::RadToDeg() * v1.Angle(v2);
-  double time = fabs((firstHit.getTime()-secondHit.getTime()));
+  double dt = fabs((firstHit.getTime()-secondHit.getTime()));
   double dx = v2.X()-v1.X();
   double dy = v2.Y()-v1.Y();
   double dz = v2.Z()-v1.Z();
-  double del_time = fabs((distance/kLightVelocity_cm_ps) -time);
+  double del_time = fabs((distance/kLightVelocity_cm_ps) - dt);
 
   if (saveHistos) {
             stats.fillHistogram("Opening_angle_before", open_angles);
@@ -271,9 +271,10 @@ bool EventCategorizerTools::removeNeighbourhits(
             stats.fillHistogram("opening_angle_Vs_scinID1", open_angles, scinID1);
             stats.fillHistogram("opening_angle_Vs_scinID2", open_angles, scinID2);
             stats.fillHistogram("delta_time_before", del_time);
+	    
             stats.fillHistogram("scID Distribution", scinID1,scinID2,open_angles);
             stats.fillHistogram("scinID1_Vs_scinID2",scinID1, scinID2);
-            stats.fillHistogram("time_diff_Vs_distance_before", distance, del_time);
+            stats.fillHistogram("distance_vs_time_diff_before", distance, del_time);
           }
 
   if (scinID1 == scinID2)  {return false;}
@@ -285,7 +286,7 @@ bool EventCategorizerTools::removeNeighbourhits(
             stats.fillHistogram("opening_angle_Vs_z", open_angles, dz);
             stats.fillHistogram("delta_time", del_time);
             stats.fillHistogram("scID Distribution_after", scinID1,scinID2,open_angles);
-            stats.fillHistogram("time_diff_Vs_distance", distance, del_time);
+            stats.fillHistogram("distance_vs_time_diff", distance, del_time);
                 }
            }
   return true;
@@ -341,17 +342,17 @@ bool EventCategorizerTools::removeNeighbourhits(
 
      if (saveHistos)
        {
-	 stats.fillHistogram("qqq1", t3-t2);
-	 stats.fillHistogram("qqq2", t2-t1);
-	 stats.fillHistogram("qqq3", t3-t1);
+	 stats.fillHistogram("hit_order1", t3-t2);
+	 stats.fillHistogram("hit_order2", t2-t1);
+	 stats.fillHistogram("hit_order3", t3-t1);
 	 stats.fillHistogram("sum_diff_angle_dist", theta_sum,theta_diff);
-	 stats.fillHistogram("xyz1",dt.at(0),dist.at(0));
-	 stats.fillHistogram("xyz2",dt.at(1),dist.at(1));
-	 stats.fillHistogram("xyz3",dt.at(2),dist.at(2));
+	 stats.fillHistogram("xyz1",dist.at(0),dt.at(0));
+	 stats.fillHistogram("xyz2",dist.at(1),dt.at(1));
+	 stats.fillHistogram("xyz3",dist.at(2),dt.at(2));
 	 stats.fillHistogram("t1",dt.at(0));
 	 stats.fillHistogram("t2",dt.at(1));
 	 stats.fillHistogram("t3",dt.at(2));
-	 stats.fillHistogram("d1",dist.at(0));
+	 //	 stats.fillHistogram("xy",dt.at(0),dt.at(2));
 
        }
      return true;
