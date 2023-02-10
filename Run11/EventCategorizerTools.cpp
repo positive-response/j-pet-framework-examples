@@ -262,6 +262,8 @@ bool EventCategorizerTools::removeNeighbourhits(
   double dy = v2.Y()-v1.Y();
   double dz = v2.Z()-v1.Z();
   double del_time = fabs((distance/kLightVelocity_cm_ps) - dt);
+  double del_time2 = fabs((distance/kLightVelocity_cm_ps));
+  double del_time3 = fabs(dt);
 
   if (saveHistos) {
             stats.fillHistogram("Opening_angle_before", open_angles);
@@ -275,6 +277,10 @@ bool EventCategorizerTools::removeNeighbourhits(
             stats.fillHistogram("scID Distribution", scinID1,scinID2,open_angles);
             stats.fillHistogram("scinID1_Vs_scinID2",scinID1, scinID2);
             stats.fillHistogram("distance_vs_time_diff_before", distance, del_time);
+	    stats.fillHistogram("distance_vs_time_diff_before2(dis)", distance, del_time2);
+	    stats.fillHistogram("distance_vs_time_diff_before3(dt)", distance, dt);
+	    stats.fillHistogram("time_difference", dt);
+	    stats.fillHistogram("distance", distance);
           }
 
   if (scinID1 == scinID2)  {return false;}
