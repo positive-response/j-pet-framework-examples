@@ -19,6 +19,7 @@
 #include <JPetStatistics/JPetStatistics.h>
 #include <JPetEvent/JPetEvent.h>
 #include <JPetHit/JPetHit.h>
+#include <tuple>
 
 static const double kLightVelocity_cm_ps = 0.0299792458;
 static const double kUndefinedValue = 999.0;
@@ -27,7 +28,7 @@ static const double kUndefinedValue = 999.0;
  * @brief Tools for Event Categorization
  *
  * Lots of tools in constatnt developement.
-*/
+ **/
 class EventCategorizerTools
 {
 public:  
@@ -40,9 +41,13 @@ public:
   static bool checkForScatter(const JPetEvent& event, JPetStatistics& stats,
                               bool saveHistos, double scatterTOFTimeDiff, 
                               std::string fTOTCalculationType);
-  static bool checkForAnnihilation(const JPetEvent& event, JPetStatistics& stats,
-				   bool saveHistos,
-				   std::string fTOTCalculation );
+  static std::tuple<int, int,bool> checkForAnnihilation(const JPetEvent& event, JPetStatistics& stats,
+				   bool saveHistos);
+  static bool removeNeighbourhits(const JPetEvent& event, JPetStatistics& stats,
+                                   bool saveHistos,
+                                   std::string fTOTCalculation );
+  static std::pair<int, bool> checkFor5gamma(const JPetEvent& event, JPetStatistics& stats,
+					     bool saveHistos, std::string fTOTCalculation);
   static double calculateDistance(const JPetHit& hit1, const JPetHit& hit2);
   static double calculateScatteringTime(const JPetHit& hit1, const JPetHit& hit2);
   static double calculateScatteringAngle(const JPetHit& hit1, const JPetHit& hit2);
