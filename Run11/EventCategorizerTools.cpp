@@ -20,8 +20,10 @@
 #include <vector>
 #include <tuple>
 
+
 using namespace std;
 int ha,hb,hcounta,hcountb=0;
+int n = 0;
 /**
 
 * Method for determining type of event - back to back 2 gamma
@@ -34,25 +36,22 @@ bool EventCategorizerTools::checkFor2Gamma(
     {
       return false;
     }
-
   stats.fillHistogram("Hit_multiplicity_2g", event.getHits().size());
-  for (auto i = 0; i < event.getHits().size(); i++)
-    {
-    double tot = event.getHits().at(i).getEnergy();
-    if (tot > 65000)
-      {
-	return false;
-      }
-    // stats.fillHistogram("simple_tot", tot);
-     if (fabs(event.getHits().at(i).getPosZ()) > 23)
-       {
-         return false;
-       }
-    }
-
+  /* for (auto i = 0; i < event.getHits().size(); i++)                                                                                                                                                      
+    {                                                                                                                                                                                                      
+    double tot = event.getHits().at(i).getEnergy();                                                                                                                                                        
+    if (tot > 65000)                                                                                                                                                                                       
+      {                                                                                                                                                                                                           return false;                                                                                                                                                                                       
+      }                                                                                                                                                                                                    
+    if (fabs(event.getHits().at(i).getPosZ()) > 23)                                                                                                                                                                {                                                                                                                                                                                                  
+         return false;                                                                                                                                                                                     
+       } 
+       }*/  
+  
+  JPetHit firstHit, secondHit;
   for (auto i = 0; i < event.getHits().size(); i++){
     for (auto j = i + 1; j < event.getHits().size(); j++) {
-      JPetHit firstHit, secondHit;
+      //  JPetHit firstHit, secondHit;
       if (event.getHits().at(i).getTime() < event.getHits().at(j).getTime()) {
         firstHit = event.getHits().at(i);
         secondHit = event.getHits().at(j);
@@ -60,7 +59,7 @@ bool EventCategorizerTools::checkFor2Gamma(
         firstHit = event.getHits().at(j);
         secondHit = event.getHits().at(i);
       }
-
+   
       // Checking for back to back
 
       double timeDiff = fabs(firstHit.getTime() - secondHit.getTime());
@@ -88,14 +87,16 @@ bool EventCategorizerTools::checkFor2Gamma(
           stats.fillHistogram("AnnihPoint_ZY", annhilationPoint.Z(), annhilationPoint.Y());
           stats.fillHistogram("Annih_DLOR", deltaLor);
 	  stats.fillHistogram("2Gamma_TimeDiff_after", timeDiff / 1000.0);
-          stats.fillHistogram("2Gamma_ThetaDiff_after", thetaDiff);	  
+          stats.fillHistogram("2Gamma_ThetaDiff_after", thetaDiff);
+	  //	  stats.fillHistogram("Hit_multiplicity_2g", event.getHits().size());
         }
-        return true;
+	  return true;
+
       }
+}
+}
      
-    }
-  }
-  return true;
+   return true;
 }
 
 /**
@@ -105,7 +106,7 @@ bool EventCategorizerTools::checkFor3Gamma(const JPetEvent& event, JPetStatistic
 {
   if (event.getHits().size() < 3) return false;
   stats.fillHistogram("Hit_multiplicity_3g", event.getHits().size());
-  
+  /*
   for (auto i = 0; i < event.getHits().size(); i++)
     {      
     double tot = event.getHits().at(i).getEnergy();
@@ -118,15 +119,19 @@ bool EventCategorizerTools::checkFor3Gamma(const JPetEvent& event, JPetStatistic
        {
          return false;
        }
-    }
-  
+    }*/
+
+  JPetHit firstHit, secondHit, thirdHit;
     for (auto i = 0; i < event.getHits().size(); i++){
       for (auto j = i + 1; j < event.getHits().size(); j++) {
 	for (auto k = j + 1; k < event.getHits().size(); k++) {
-        JPetHit firstHit = event.getHits().at(i);
-        JPetHit secondHit = event.getHits().at(j);
-        JPetHit thirdHit = event.getHits().at(k);
-
+        firstHit = event.getHits().at(i);
+        secondHit = event.getHits().at(j);
+        thirdHit = event.getHits().at(k);
+	}
+      }
+    }
+	
         vector<double> thetaAngles;
         thetaAngles.push_back(firstHit.getBarrelSlot().getTheta());
         thetaAngles.push_back(secondHit.getBarrelSlot().getTheta()) ;
@@ -143,11 +148,9 @@ bool EventCategorizerTools::checkFor3Gamma(const JPetEvent& event, JPetStatistic
 	
         if (saveHistos) {
           stats.fillHistogram("3Gamma_Angles", transformedX, transformedY);
+	  // stats.fillHistogram("Hit_multiplicity_3g", event.getHits().size());
 	}
         
-      }
-    }
-  }
   return true;
 }
 
@@ -159,25 +162,26 @@ bool EventCategorizerTools::checkForPrompt(
   double deexTOTCutMin, double deexTOTCutMax, std::string fTOTCalculationType)
 {
 
+  stats.fillHistogram("Hit_multiplicity_prompt", event.getHits().size());
+  double tot;
   for (auto i = 0; i < event.getHits().size(); i++) {
     if(fabs(event.getHits().at(i).getPosZ()) > 23)
       {
         return false;
       }
  
-    double tot = event.getHits().at(i).getEnergy();
+    tot = event.getHits().at(i).getEnergy();
     stats.fillHistogram("SYNC_TOT", tot);
-    
-       
+  }
     if (tot > deexTOTCutMin && tot < deexTOTCutMax){
 	if (saveHistos){
 	 stats.fillHistogram("Deex_TOT_cut", tot);
-	 stats.fillHistogram("Hit_multiplicity_prompt", event.getHits().size());
+       //stats.fillHistogram("Hit_multiplicity_prompt", event.getHits().size());
 	}
 	return true;
     }
-  }
-  return true;
+    return false;
+
 }
 
 
@@ -185,37 +189,46 @@ bool EventCategorizerTools::checkForPrompt(
 std::tuple<int, int, bool> EventCategorizerTools::checkForAnnihilation(
   const JPetEvent& event, JPetStatistics& stats, bool saveHistos)
 {
+  stats.fillHistogram("Hit_multiplicity_ann0", event.getHits().size()); 
   if (event.getHits().size() < 2)
     {
       return std::make_tuple(hcountb, hcounta, false);
     }
- 
+  stats.fillHistogram("Hit_multiplicity_ann1", event.getHits().size());
+  double tot, tota=0;
   for (auto i = 0; i < event.getHits().size(); i++) {
-             
-       double tot = event.getHits().at(i).getEnergy();
-       stats.fillHistogram("Ann_TOT_before_cut", tot);
+    if (fabs( event.getHits().at(i).getPosZ()) > 23)
+      {
+	 return std::make_tuple(hcountb, hcounta, false);
+      }
+  }
+  stats.fillHistogram("Hit_multiplicity_ann2", event.getHits().size());
+  
+for (auto i = 0; i < event.getHits().size(); i++) {
+  tot = event.getHits().at(i).getEnergy();     
+  stats.fillHistogram("Ann_TOT_before_cut", tot);
        if (tot > 65000)
 	 {
 	   return std::make_tuple(hcountb, hcounta, false);
 	 }
-       
-       double z = fabs( event.getHits().at(i).getPosZ());
-       if (z > 23)
-	 {
-	   return std::make_tuple(hcountb, hcounta, false);
-	 }
-       
-     if (saveHistos)
+       tota = event.getHits().at(i).getEnergy();
+       stats.fillHistogram("Ann_TOT", tota);
+  }
+ 
+  stats.fillHistogram("Hit_multiplicity_ann3", event.getHits().size());     
+  /*    if (saveHistos)
        {
-	 stats.fillHistogram("Ann_TOT", tot); 
-         stats.fillHistogram("Hit_multiplicity_ann", event.getHits().size());
+	 //	 stats.fillHistogram("Ann_TOT", tota);
+	 //	 stats.fillHistogram("Hit_multiplicity_ann", event.getHits().size());
+         
        }
-          
+
+  */           
   /* hcountb=hcountb+hb;
     hcounta=hcounta+ha;
     hb=0;
     ha=0;*/
-    }
+     // }
   return std::make_tuple(hcountb, hcounta, true);
 }
 
@@ -225,31 +238,32 @@ std::tuple<int, int, bool> EventCategorizerTools::checkForAnnihilation(
 bool EventCategorizerTools::removeNeighbourhits(
   const JPetEvent& event, JPetStatistics& stats, bool saveHistos,
   std::string fTOTCalculationType)
-{
+{/*
   if (event.getHits().size() < 2)
     {
     return false;
     }
-
-  else if (event.getHits().size() == 2)
-   {
-     
-  stats.fillHistogram("Hit_multiplicity_n2", event.getHits().size());
-  for (auto i = 0; i < 2; i++)
+ */
+  vector<JPetHit> hits = event.getHits();
+  /* for (auto i = 0; i < event.getHits().size(); i++)
     {
-       double tot = event.getHits().at(i).getEnergy();
+       double tot = hits[i].getEnergy();
        if (tot > 65000)
          return false;
-     }
-
-     vector<JPetHit> hits = event.getHits();
-     if (fabs(hits[0].getPosZ()) > 23 && fabs(hits[1].getPosZ()) > 23)
+       
+       if (fabs(hits[i].getPosZ()) > 23)
        {
          return false;
        }
 
-  JPetHit firstHit = event.getHits().at(0);
-  JPetHit secondHit = event.getHits().at(1);
+     }
+  */
+ if (event.getHits().size() == 2)
+   {
+     
+  stats.fillHistogram("Hit_multiplicity_n2", event.getHits().size());
+  JPetHit firstHit = hits[0];
+  JPetHit secondHit = hits[1];
   int scinID1 = firstHit.getScintillator().getID();
   int scinID2 = secondHit.getScintillator().getID();
   TVector3 v1 = firstHit.getPos();
@@ -304,17 +318,6 @@ bool EventCategorizerTools::removeNeighbourhits(
  else if (event.getHits().size() == 3)
    {
      stats.fillHistogram("Hit_multiplicity_n3", event.getHits().size());
-     for (auto i = 0; i < 3; i++){
-       double tot = event.getHits().at(i).getEnergy();
-       if (tot > 65000)
-	 return false;
-     }
-
-     vector<JPetHit> hits = event.getHits();
-     if (fabs(hits[0].getPosZ()) > 23 && fabs(hits[1].getPosZ()) > 23 && fabs(hits[2].getPosZ()) > 23)
-       {
-	 return false;
-       }
      
      TVector3 v1 =  hits[0].getPos();
      TVector3 v2 =  hits[1].getPos();
@@ -333,6 +336,8 @@ bool EventCategorizerTools::removeNeighbourhits(
 
      vector<double> dist;
      vector<double> dt;
+     double tot3 = 0.0;
+     
 
      for(auto i = 0; i<3; i++)
        {
@@ -344,6 +349,10 @@ bool EventCategorizerTools::removeNeighbourhits(
 	     dist.push_back(d);
 	     dt.push_back(fabs((d/kLightVelocity_cm_ps) -t));
 	   }
+       }
+     for (auto i =0; i < 3; i++)
+       {
+	 tot3 = hits[i].getEnergy();
        }
 
      if (saveHistos)
@@ -358,15 +367,134 @@ bool EventCategorizerTools::removeNeighbourhits(
 	 stats.fillHistogram("t1",dt.at(0));
 	 stats.fillHistogram("t2",dt.at(1));
 	 stats.fillHistogram("t3",dt.at(2));
+	 stats.fillHistogram("3hit_tot",tot3);
 	 //	 stats.fillHistogram("xy",dt.at(0),dt.at(2));
 
        }
      return true;
    }
+     
+ if (event.getHits().size()==5)
+    {
+      vector<TVector3> pos;
+      vector<double> time;
+      vector<double> dist;
+      vector<double> dt;
+      double tot5 = 0.0;
+      stats.fillHistogram("Hit_multiplicity_n5", event.getHits().size());
+      
+      for(auto i = 0; i< 5; i++)
+        {
+          pos.push_back(hits[i].getPos());
+          time.push_back(hits[i].getTime());
+	}
+
+      for(auto i = 0; i<5; i++)
+        {
+          for(auto j = i+1; j<5; j++)
+            {
+              double d =fabs((hits[i].getPos()-hits[j].getPos()).Mag());
+              double t =fabs(hits[i].getTime()-hits[j].getTime());
+             dist.push_back(d);
+              dt.push_back(fabs((d/kLightVelocity_cm_ps) -t));
+            }
+        }
+
+      for (auto i =0; i < 3; i++)
+       {
+         tot5 = hits[i].getEnergy();
+       }
+
+
+      if (saveHistos)
+	{
+            for(auto k =1; k<=10; k++)
+              {
+		// stats.fillHistogram(Form("D_vs_t%d", k), dist[k-1],dt[k-1]);
+		//	stats.fillHistogram(Form("dt_vs_dt%d", k), dt[k-1],dt[k]);
+		stats.fillHistogram("5hit_tot", tot5 );
+		stats.fillHistogram("D_vs_dt", dist[k-1], dt[k-1]);
+		stats.fillHistogram("dt_vs_dt", dt[k-1],dt[k]);
+		  
+              }
+          }
+      return true;
+    }
+
+
+
+     
+}
+/*
+std::pair<int, bool> EventCategorizerTools::checkFor5gamma(
+const JPetEvent& event, JPetStatistics& stats, bool saveHistos,
+std::string fTOTCalculationType)
+
+{
+  if (event.getHits().size() < 3)
+    {
+      return std::make_pair(false, n);
+    }
+
+  n = event.getHits().size();
+  int c = (n*(n-1))/2;
+
+  
+  for(auto i = 0; i<event.getHits().size(); i++)
+    {
+      auto tot = event.getHits().at(i).getEnergy();
+      if (tot > 65000)
+	{
+	  return std::make_pair(false, n);
+	}
+    }
+  
+  vector<JPetHit> hits = event.getHits();
+  
+  for(auto i = 0; i< event.getHits().size(); i++)
+    {
+     if (fabs(hits[i].getPosZ()) > 23)
+       {
+         return std::make_pair(false, c);
+       }
+    }
+  
+  if (event.getHits().size()==5)
+    {
+      vector<TVector3> pos;
+      vector<double> time;
+      vector<double> dist;
+      vector<double> dt;
+      for(auto i = 0; i< event.getHits().size(); i++)
+	{
+	  pos.push_back(hits[i].getPos());
+	  time.push_back(hits[i].getTime());
+	}
+      
+
+      for(auto i = 0; i<event.getHits().size(); i++)
+	{
+	  for(auto j = i+1; j<event.getHits().size(); j++)
+	    {
+	      double d =fabs((hits[i].getPos()-hits[j].getPos()).Mag());
+	      double t =fabs(hits[i].getTime()-hits[j].getTime());
+             dist.push_back(d);
+              dt.push_back(fabs((d/kLightVelocity_cm_ps) -t));
+	    }
+	}
+      
+      if (saveHistos)
+	  {
+	    for(auto k =1; k<=10; k++)
+	      {
+		stats.fillHistogram(Form("D_vs_t%d", k), dist[k-1],dt[k-1]);
+	      }
+	  }
+      return std::make_pair(true, n);
+    }
 
 }
-
-
+*/
 
 /**
 * Method for determining type of event - scatter

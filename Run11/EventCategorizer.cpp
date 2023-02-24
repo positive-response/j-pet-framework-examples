@@ -19,14 +19,16 @@
 #include "EventCategorizer.h"
 #include <iostream>
 #include <tuple>
+#include "TEfficiency.h"
+
 
 using namespace jpet_options_tools;
 using namespace std;
 
 int a1, a2, a3 =0;
-int b1 = 0;
+int e = 0;
 int total_count, count_ann, count_2g, count_3g;
-
+int c = 0;
 int hcountb2, hcounta2=0;
 EventCategorizer::EventCategorizer(const char* name): JPetUserTask(name) {}
 
@@ -85,6 +87,8 @@ bool EventCategorizer::init()
     WARNING("No TOT calculation option given by the user. Using standard sum.");
   }
 
+  EventCategorizer::pEff = new TEfficiency("eff","my efficiency;x;#epsilon",20,0,10);
+
 
   // Input events type
   fOutputEvents = new JPetTimeWindow("JPetEvent");
@@ -99,10 +103,14 @@ bool EventCategorizer::exec()
 {
   if (auto& timeWindow = dynamic_cast<const JPetTimeWindow* const>(fEvent)) {
     vector<JPetEvent> events;
+    bool bPassed;
+       TCanvas* c1 = new TCanvas("example","",600,400);
+   c1->SetFillStyle(1001);
+   c1->SetFillColor(kWhite);
    
     for (uint i = 0; i < timeWindow->getNumberOfEvents(); i++) {
       const auto& event = dynamic_cast<const JPetEvent&>(timeWindow->operator[](i));
-    b1++;
+    e++;
       std::tuple<int, int, bool> isAnn = EventCategorizerTools::checkForAnnihilation(
        event, getStatistics(), fSaveControlHistos);
 
@@ -116,11 +124,21 @@ bool EventCategorizer::exec()
       bool isScattered = EventCategorizerTools::checkForScatter(
         event, getStatistics(), fSaveControlHistos, fScatterTOFTimeDiff, fTOTCalculationType
       );
+      bool isNeighbourHits;
 
-      bool isNeighbourHits = EventCategorizerTools::removeNeighbourhits(
+      //      bool isNeighbourHits = EventCategorizerTools::removeNeighbourhits(
+      //	event, getStatistics(),fSaveControlHistos, fTOTCalculationType
+      // );
+        
+	 /*
+      std::pair<int, bool> is5gamma = EventCategorizerTools::checkFor5gamma(
 	event, getStatistics(),fSaveControlHistos, fTOTCalculationType
       );
 
+      bool is5gam = std::get<1>(is5gamma);
+      int s = std::get<0>(is5gamma);
+      c = (s*(s-1))/2;
+      */
       double sum_tot=0.0;
       double sum_tot_2g= 0.0;
       double sum_tot_3g=0.0;
@@ -131,14 +149,20 @@ bool EventCategorizer::exec()
       double sum_tot_3gann_prompt=0.0;
 
        if(isAnnihilation){a1++;
-         is2Gamma = EventCategorizerTools::checkFor2Gamma(
+	 	   is2Gamma = EventCategorizerTools::checkFor2Gamma(
                     event, getStatistics(), fSaveControlHistos, fB2BSlotThetaDiff, fMaxTimeDiff
                      );
          is3Gamma = EventCategorizerTools::checkFor3Gamma(
                     event, getStatistics(), fSaveControlHistos
-                    ); }
+                    );
+	 isNeighbourHits = EventCategorizerTools::removeNeighbourhits(
+        event, getStatistics(),fSaveControlHistos, fTOTCalculationType
+      );
+
+
+       }
        if(isNeighbourHits);
-	
+       
       JPetEvent newEvent = event;
       if(is2Gamma){  newEvent.addEventType(JPetEventType::k2Gamma); a2++;}
       if(is3Gamma){  newEvent.addEventType(JPetEventType::k3Gamma); a3++;}
@@ -183,11 +207,11 @@ bool EventCategorizer::exec()
       events.push_back(newEvent);
       
     }
-   total_count += b1;
+   total_count += e;
    count_ann += a1;
    count_2g += a2;
    count_3g += a3;
-   b1 = 0; a1 = 0; a2 = 0; a3 = 0;
+   e = 0; a1 = 0; a2 = 0; a3 = 0;
    
    saveEvents(events);
   }
@@ -199,9 +223,10 @@ bool EventCategorizer::exec()
 bool EventCategorizer::terminate()
 {
   INFO("Event categorization completed.");
+  pEff->Draw("AP");
   //   cout<<" hits before categorization:"<<hcountb2<<endl;
   //   cout<<" hits after categorization:"<<hcounta2<<endl;
-  /*   cout<<" event counts before categorization:"<<total_count<<endl;
+  /* cout<<" event counts before categorization:"<<total_count<<endl;
    cout<<" ann counts after categorization:"<<count_ann<<endl;
    cout<<" 3g counts after categorization:"<<count_3g<<endl;
    cout<<" 2g counts after categorization:"<<count_2g<<endl;*/ 
@@ -272,7 +297,16 @@ void EventCategorizer::initialiseHistograms(){
    );
 
 getStatistics().createHistogramWithAxes(
-                                          new TH1D("Hit_multiplicity_ann","Multiplicity of hits", 10, 0.5, 10.5),
+                                          new TH1D("Hit_multiplicity_ann0","Multiplicity of hits(no cut)", 10, 0.5, 10.5),
+                                          "No. of hits","counts");
+getStatistics().createHistogramWithAxes(
+                                          new TH1D("Hit_multiplicity_ann1","Multiplicity of hits(1st cut)", 10, 0.5, 10.5),
+                                          "No. of hits","counts");
+getStatistics().createHistogramWithAxes(
+                                          new TH1D("Hit_multiplicity_ann2","Multiplicity of hits(2nd cut)", 10, 0.5, 10.5),
+                                          "No. of hits","counts");
+getStatistics().createHistogramWithAxes(
+                                          new TH1D("Hit_multiplicity_ann3","Multiplicity of hits(3rd cut)", 10, 0.5, 10.5),
                                           "No. of hits","counts");
   
  
@@ -296,8 +330,8 @@ getStatistics().createHistogramWithAxes(
    );
 
   getStatistics().createHistogramWithAxes(
-                                          new TH1D("Hit_multiplicity_2g","Multiplicity of hits", 10, 0.5, 10.5),
-                                          "No. of hits","counts");
+ new TH1D("Hit_multiplicity_2g","Multiplicity of hits", 10, 0.5, 10.5),
+  "No. of hits","counts");
 
   /////////
   getStatistics().createHistogramWithAxes(
@@ -473,14 +507,19 @@ getStatistics().createHistogramWithAxes(
   );
 
  getStatistics().createHistogramWithAxes(
-    new TH1D("Hit_multiplicity_n2","Multiplicity of hits", 10, 0.5, 10.5),
+    new TH1D("Hit_multiplicity_n2","Multiplicity of hits(2 hITS)", 10, 0.5, 10.5),
     "No. of hits","counts"
   );
  
  getStatistics().createHistogramWithAxes(
-   new TH1D("Hit_multiplicity_n3","Multiplicity of hits", 10, 0.5, 10.5),
+   new TH1D("Hit_multiplicity_n3","Multiplicity of hits(3 HITS)", 10, 0.5, 10.5),
   "No. of hits","counts"
    );
+
+ getStatistics().createHistogramWithAxes(
+    new TH1D("Hit_multiplicity_n5","Multiplicity of hits(5 HITS)", 10, 0.5, 10.5),
+    "No. of hits","counts"
+  );
 
 
  getStatistics().createHistogramWithAxes(
@@ -532,23 +571,23 @@ getStatistics().createHistogramWithAxes(
 
   getStatistics().createHistogramWithAxes(
     new TH2D("xyz1", "distance_vs_time_diff(pair12)",
-             150, 0, 150,250, 0, 5000000),
+             150, 0, 150,250, 0, 2000000),
     "Distance[cm]","#Delta_t[ps]"
   );
     
 getStatistics().createHistogramWithAxes(
     new TH2D("xyz2", "distance_vs_time_diff(pair13)",
-             150, 0, 150,250, 0, 5000000),
+             150, 0, 150,250, 0, 2000000),
     "Distance[cm]","#Delta_t[ps]"
   );
 
  getStatistics().createHistogramWithAxes(
     new TH2D("xyz3", "distance_vs_time_diff(pair23)",
-             150,0,150,250, 0, 5000000),
+             150,0,150,250, 0, 2000000),
     "Distance[cm]","#Delta_t[ps]"
   );
 
-     getStatistics().createHistogramWithAxes(
+  getStatistics().createHistogramWithAxes(
    new TH1D("t1","t1", 250, 0, 5000000),
   "#Delta_t(12)[ps]","counts"
    );
@@ -565,6 +604,7 @@ getStatistics().createHistogramWithAxes(
    new TH2D("xy","scatter_test", 250, 0, 1700000,250, 0, 1700000),"1","2"
    );*/
 
+     
      getStatistics().createHistogramWithAxes(
     new TH1D("hit_order1","time(t3-t2)", 100, 0, 15000),
     "#deltat_between_hits","counts" );
@@ -589,4 +629,19 @@ getStatistics().createHistogramWithAxes(
    );
 
 
+ //y for(auto i = 1; i<=10; i++)
+   {
+     getStatistics().createHistogramWithAxes(
+	new TH2D("D_vs_dt", "distance_vs_dt", 150, 0, 150,250, 0, 1500000),
+        "Distance[cm]","#Delta_t[ps]");
+
+     getStatistics().createHistogramWithAxes(
+        new TH2D("dt_vs_dt", "dt_vs_dt", 250, 0, 5000000,250, 0, 5000000),
+        "#Delta_t[ps]","#Delta_t[ps]");
+
+   }
+ getStatistics().createHistogramWithAxes(new TH1D("3hit_tot", "TOT for 3 hits", 200, -100, 200000), "TOT[ps]", "counts");
+ getStatistics().createHistogramWithAxes(new TH1D("5hit_tot", "TOT for 5 hits", 200, -100, 200000), "TOT[ps]", "counts");
+ getStatistics().createHistogramWithAxes(new TH1D("efficiency",  "TOT efficiency",  200, -100.0, 200000.0), "TOT[ps]", "Efficiency");
+	    
 }
