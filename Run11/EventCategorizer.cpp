@@ -25,11 +25,6 @@
 using namespace jpet_options_tools;
 using namespace std;
 
-int a1, a2, a3 =0;
-int e = 0;
-int total_count, count_ann, count_2g, count_3g;
-int c = 0;
-int hcountb2, hcounta2=0;
 EventCategorizer::EventCategorizer(const char* name): JPetUserTask(name) {}
 
 EventCategorizer::~EventCategorizer() {}
@@ -87,7 +82,8 @@ bool EventCategorizer::init()
     WARNING("No TOT calculation option given by the user. Using standard sum.");
   }
 
-  EventCategorizer::pEff = new TEfficiency("eff","my efficiency;x;#epsilon",20,0,10);
+  Event_Eff = new TEfficiency("event_eff","Event_efficiency;methods;#epsilon",20,0,10);
+  Hit_Eff = new TEfficiency("hit_eff","cut_efficiency;cuts;#epsilon",20,0,10);
 
 
   // Input events type
@@ -103,42 +99,30 @@ bool EventCategorizer::exec()
 {
   if (auto& timeWindow = dynamic_cast<const JPetTimeWindow* const>(fEvent)) {
     vector<JPetEvent> events;
-    bool bPassed;
-       TCanvas* c1 = new TCanvas("example","",600,400);
-   c1->SetFillStyle(1001);
-   c1->SetFillColor(kWhite);
-   
+       
     for (uint i = 0; i < timeWindow->getNumberOfEvents(); i++) {
       const auto& event = dynamic_cast<const JPetEvent&>(timeWindow->operator[](i));
-    e++;
-      std::tuple<int, int, bool> isAnn = EventCategorizerTools::checkForAnnihilation(
-       event, getStatistics(), fSaveControlHistos);
 
-      hcountb2 = std::get<0>(isAnn);
-      hcounta2 = std::get<1>(isAnn);
-      bool isAnnihilation = std::get<2>(isAnn);
+      std::pair<TEfficiency*, bool> isInit = EventCategorizerTools::initialCut(
+       event, getStatistics(), fSaveControlHistos);
+      Hit_Eff = std::get<0>(isInit);
+      bool isInitialCut = std::get<1>(isInit);
+      Event_Eff->Fill(isInitialCut,1);
+
+      bool isAnnihilation;
       bool is2Gamma, is3Gamma;
-      bool isPrompt = EventCategorizerTools::checkForPrompt(
-        event, getStatistics(), fSaveControlHistos, fDeexTOTCutMin, fDeexTOTCutMax, fTOTCalculationType
-      );
+      bool isPrompt;
+      totalEvents++;
+     
+      if (isPrompt) totalPrompts++;
       bool isScattered = EventCategorizerTools::checkForScatter(
         event, getStatistics(), fSaveControlHistos, fScatterTOFTimeDiff, fTOTCalculationType
       );
+     Event_Eff->Fill(isScattered,7);
+      if (isScattered) totalScattered++;
       bool isNeighbourHits;
 
-      //      bool isNeighbourHits = EventCategorizerTools::removeNeighbourhits(
-      //	event, getStatistics(),fSaveControlHistos, fTOTCalculationType
-      // );
-        
-	 /*
-      std::pair<int, bool> is5gamma = EventCategorizerTools::checkFor5gamma(
-	event, getStatistics(),fSaveControlHistos, fTOTCalculationType
-      );
-
-      bool is5gam = std::get<1>(is5gamma);
-      int s = std::get<0>(is5gamma);
-      c = (s*(s-1))/2;
-      */
+     
       double sum_tot=0.0;
       double sum_tot_2g= 0.0;
       double sum_tot_3g=0.0;
@@ -148,8 +132,19 @@ bool EventCategorizer::exec()
       double sum_tot_ann_prompt= 0.0;
       double sum_tot_3gann_prompt=0.0;
 
-       if(isAnnihilation){a1++;
-	 	   is2Gamma = EventCategorizerTools::checkFor2Gamma(
+      if (isInitialCut){
+	
+	isAnnihilation = EventCategorizerTools::checkForAnnihilation(
+       event, getStatistics(), fSaveControlHistos);
+	
+	isPrompt = EventCategorizerTools::checkForPrompt(
+        event, getStatistics(), fSaveControlHistos, fDeexTOTCutMin, fDeexTOTCutMax, fTOTCalculationType);
+
+	Event_Eff->Fill(isPrompt,4);
+
+       if(isAnnihilation){
+	 
+	 is2Gamma = EventCategorizerTools::checkFor2Gamma(
                     event, getStatistics(), fSaveControlHistos, fB2BSlotThetaDiff, fMaxTimeDiff
                      );
          is3Gamma = EventCategorizerTools::checkFor3Gamma(
@@ -159,16 +154,21 @@ bool EventCategorizer::exec()
         event, getStatistics(),fSaveControlHistos, fTOTCalculationType
       );
 
-
+	   Event_Eff->Fill(isAnnihilation,2);
+	   Event_Eff->Fill(is2Gamma,5);
+	   Event_Eff->Fill(is3Gamma,6);
+	   Event_Eff->Fill(isNeighbourHits,3);
        }
+      }
+      
        if(isNeighbourHits);
        
       JPetEvent newEvent = event;
-      if(is2Gamma){  newEvent.addEventType(JPetEventType::k2Gamma); a2++;}
-      if(is3Gamma){  newEvent.addEventType(JPetEventType::k3Gamma); a3++;}
+      if(is2Gamma){  newEvent.addEventType(JPetEventType::k2Gamma); }
+      if(is3Gamma){  newEvent.addEventType(JPetEventType::k3Gamma); }
       if(isPrompt) newEvent.addEventType(JPetEventType::kPrompt);
       if(isScattered) newEvent.addEventType(JPetEventType::kScattered);
-      //    if(isNeighbourHits);
+      
       
       if(fSaveControlHistos){
        for(auto hit : event.getHits()){
@@ -207,12 +207,6 @@ bool EventCategorizer::exec()
       events.push_back(newEvent);
       
     }
-   total_count += e;
-   count_ann += a1;
-   count_2g += a2;
-   count_3g += a3;
-   e = 0; a1 = 0; a2 = 0; a3 = 0;
-   
    saveEvents(events);
   }
   else { return false; }
@@ -223,14 +217,25 @@ bool EventCategorizer::exec()
 bool EventCategorizer::terminate()
 {
   INFO("Event categorization completed.");
-  pEff->Draw("AP");
-  //   cout<<" hits before categorization:"<<hcountb2<<endl;
-  //   cout<<" hits after categorization:"<<hcounta2<<endl;
-  /* cout<<" event counts before categorization:"<<total_count<<endl;
-   cout<<" ann counts after categorization:"<<count_ann<<endl;
-   cout<<" 3g counts after categorization:"<<count_3g<<endl;
-   cout<<" 2g counts after categorization:"<<count_2g<<endl;*/ 
+  // std::cout <<float(totalPrompts)/totalEvents <<std::endl;
+  // std::cout <<float(totalScattered)/totalEvents <<std::endl;
+  auto file1 = TFile::Open("efficiency_hit.root", "recreate");
+  // if (file) std::cout << "file was created"  <<std::endl;
+  //Event_Eff->SetDirectory(gDirectory);
+  Hit_Eff->SetDirectory(gDirectory);
+  file1->Write();
+  file1->Close();
+  //  Hit_Eff= nullptr;
+  // delete Hit_Eff;
+  auto file2 = TFile::Open("efficiency_event.root", "recreate");
+  Event_Eff->SetDirectory(gDirectory);
+  file2->Write();
+  file2->Close();
+  Event_Eff = nullptr;
+  delete Event_Eff;
+  // delete Hit_Eff;
   return true;
+  
 }
 
 void EventCategorizer::saveEvents(const vector<JPetEvent>& events)
@@ -297,16 +302,19 @@ void EventCategorizer::initialiseHistograms(){
    );
 
 getStatistics().createHistogramWithAxes(
-                                          new TH1D("Hit_multiplicity_ann0","Multiplicity of hits(no cut)", 10, 0.5, 10.5),
+                                          new TH1D("Hit_multiplicity_0","Multiplicity of hits(no cut)", 10, 0.5, 10.5),
                                           "No. of hits","counts");
 getStatistics().createHistogramWithAxes(
-                                          new TH1D("Hit_multiplicity_ann1","Multiplicity of hits(1st cut)", 10, 0.5, 10.5),
+                                          new TH1D("Hit_multiplicity_cut1","Multiplicity of hits(1st cut)", 10, 0.5, 10.5),
                                           "No. of hits","counts");
 getStatistics().createHistogramWithAxes(
-                                          new TH1D("Hit_multiplicity_ann2","Multiplicity of hits(2nd cut)", 10, 0.5, 10.5),
+                                          new TH1D("Hit_multiplicity_cut2","Multiplicity of hits(2nd cut)", 10, 0.5, 10.5),
+                                          "No. of hits","counts");
+ getStatistics().createHistogramWithAxes(
+                                          new TH1D("Hit_multiplicity_ann0","Multiplicity of hits(3rd cut)", 10, 0.5, 10.5),
                                           "No. of hits","counts");
 getStatistics().createHistogramWithAxes(
-                                          new TH1D("Hit_multiplicity_ann3","Multiplicity of hits(3rd cut)", 10, 0.5, 10.5),
+                                          new TH1D("Hit_multiplicity_ann1","Multiplicity of hits(3rd cut)", 10, 0.5, 10.5),
                                           "No. of hits","counts");
   
  
