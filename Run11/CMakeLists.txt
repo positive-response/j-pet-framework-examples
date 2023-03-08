@@ -17,7 +17,7 @@ endif()
 
 ################################################################################
 ## Project name
-set(projectName LargeBarrelAnalysis)
+set(projectName Run11)
 
 ## Auxiliary files
 set(AUXILIARY_FILES
@@ -74,8 +74,8 @@ add_custom_target(clean_data_${projectName}
   COMMAND rm -f *.tslot.*.root *.phys.*.root *.sig.root)
 
 ################################################################################
-## Copy the example auxiliary files
-file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/${AUXILIARY_FILES} DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/)
+### Copy the example auxiliary files
+#file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/${AUXILIARY_FILES} DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/)
 
 ################################################################################
 ## Unit tests

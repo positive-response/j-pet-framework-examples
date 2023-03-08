@@ -41,7 +41,7 @@ public:
   static bool checkForScatter(const JPetEvent& event, JPetStatistics& stats,
                               bool saveHistos, double scatterTOFTimeDiff, 
                               std::string fTOTCalculationType);
-  static std::tuple<int, int,bool> checkForAnnihilation(const JPetEvent& event, JPetStatistics& stats,
+  static bool checkForAnnihilation(const JPetEvent& event, JPetStatistics& stats,
 				   bool saveHistos);
   static bool removeNeighbourhits(const JPetEvent& event, JPetStatistics& stats,
                                    bool saveHistos,
@@ -64,6 +64,8 @@ public:
   static TVector3 calculateAnnihilationPoint(const TVector3& hitA, const TVector3& hitB, double tof);
   static double calculatePlaneCenterDistance(const JPetHit& firstHit,
       const JPetHit& secondHit, const JPetHit& thirdHit);
+
+  static std::pair<TEfficiency*, bool> initialCut( const JPetEvent& event, JPetStatistics& stats, bool saveHistos);
 
 };
 
