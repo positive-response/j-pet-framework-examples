@@ -103,23 +103,23 @@ bool EventCategorizer::exec()
     for (uint i = 0; i < timeWindow->getNumberOfEvents(); i++) {
       const auto& event = dynamic_cast<const JPetEvent&>(timeWindow->operator[](i));
 
-      std::pair<TEfficiency*, bool> isInit = EventCategorizerTools::initialCut(
-       event, getStatistics(), fSaveControlHistos);
-      Hit_Eff = std::get<0>(isInit);
-      bool isInitialCut = std::get<1>(isInit);
-      Event_Eff->Fill(isInitialCut,1);
+      auto isInitialCut = EventCategorizerTools::initialCut(
+       event, getStatistics(), fHitCounter);
+      //Event_Eff->Fill(isInitialCut,1);
 
       bool isAnnihilation;
       bool is2Gamma, is3Gamma;
-      bool isPrompt;
-      totalEvents++;
+      bool isPrompt = true;
+      fEventPromptCounter.totalNumber++; 
+      fEventAnihilationCounter.totalNumber++; 
+      fEventScatteredCounter.totalNumber++; 
      
-      if (isPrompt) totalPrompts++;
+      if (isPrompt) fEventPromptCounter.totalAccepted++;
       bool isScattered = EventCategorizerTools::checkForScatter(
         event, getStatistics(), fSaveControlHistos, fScatterTOFTimeDiff, fTOTCalculationType
       );
-     Event_Eff->Fill(isScattered,7);
-      if (isScattered) totalScattered++;
+     //Event_Eff->Fill(isScattered,7);
+      if (isScattered) fEventScatteredCounter.totalAccepted++;
       bool isNeighbourHits;
 
      
@@ -134,7 +134,7 @@ bool EventCategorizer::exec()
 
       if (isInitialCut){
 	
-	isAnnihilation = EventCategorizerTools::checkForAnnihilation(
+       isAnnihilation = EventCategorizerTools::checkForAnnihilation(
        event, getStatistics(), fSaveControlHistos);
 	
 	isPrompt = EventCategorizerTools::checkForPrompt(
@@ -217,22 +217,24 @@ bool EventCategorizer::exec()
 bool EventCategorizer::terminate()
 {
   INFO("Event categorization completed.");
+  INFO("Ratio of prompt events: " + std::to_string(fEventPromptCounter.getRatio()));
+  INFO("Ratio of accepted hits: " + std::to_string(fHitCounter.getRatio()));
   // std::cout <<float(totalPrompts)/totalEvents <<std::endl;
   // std::cout <<float(totalScattered)/totalEvents <<std::endl;
-  auto file1 = TFile::Open("efficiency_hit.root", "recreate");
+  //auto file1 = TFile::Open("efficiency_hit.root", "recreate");
   // if (file) std::cout << "file was created"  <<std::endl;
   //Event_Eff->SetDirectory(gDirectory);
-  Hit_Eff->SetDirectory(gDirectory);
-  file1->Write();
-  file1->Close();
+  //Hit_Eff->SetDirectory(gDirectory);
+  //file1->Write();
+  //file1->Close();
   //  Hit_Eff= nullptr;
   // delete Hit_Eff;
-  auto file2 = TFile::Open("efficiency_event.root", "recreate");
-  Event_Eff->SetDirectory(gDirectory);
-  file2->Write();
-  file2->Close();
-  Event_Eff = nullptr;
-  delete Event_Eff;
+  //auto file2 = TFile::Open("efficiency_event.root", "recreate");
+  //Event_Eff->SetDirectory(gDirectory);
+  //file2->Write();
+  //file2->Close();
+  //Event_Eff = nullptr;
+  //delete Event_Eff;
   // delete Hit_Eff;
   return true;
   

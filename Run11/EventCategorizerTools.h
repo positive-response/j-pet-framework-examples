@@ -16,6 +16,7 @@
 #ifndef EVENTCATEGORIZERTOOLS_H
 #define EVENTCATEGORIZERTOOLS_H
 
+#include "Counter.h"
 #include <JPetStatistics/JPetStatistics.h>
 #include <JPetEvent/JPetEvent.h>
 #include <JPetHit/JPetHit.h>
@@ -65,7 +66,7 @@ public:
   static double calculatePlaneCenterDistance(const JPetHit& firstHit,
       const JPetHit& secondHit, const JPetHit& thirdHit);
 
-  static std::pair<TEfficiency*, bool> initialCut( const JPetEvent& event, JPetStatistics& stats, bool saveHistos);
+  static bool initialCut( const JPetEvent& event, JPetStatistics& stats, Counter& hitCounter);
 
 };
 

@@ -184,31 +184,33 @@ for (auto i = 0; i < event.getHits().size(); i++) {
 
 /**Method for initial cuts**/
 
-std::pair<TEfficiency*, bool> EventCategorizerTools::initialCut(
-  const JPetEvent& event, JPetStatistics& stats, bool saveHistos)
+bool EventCategorizerTools::initialCut(
+  const JPetEvent& event, JPetStatistics& stats, Counter& hitCounter)
 {
-  TEfficiency* Hit_Eff = new TEfficiency("hit_eff","efficiency;cuts;#epsilon",20,0,10);
   stats.fillHistogram("Hit_multiplicity_0", event.getHits().size());
   
-  bool passed = true;
   if (event.getHits().size() < 2 )
     {
-      passed = false;
-      return std::make_pair(Hit_Eff, false);
+      hitCounter.totalNumber++;
+      return false;
     }                                                                                                                                                                                                       
-  Hit_Eff->Fill(passed, 1);                                                                                                                                                                               
   stats.fillHistogram("Hit_multiplicity_cut1", event.getHits().size()); 
-  
+ 
+  bool isZLessThan23 = true; 
   for (auto i = 0; i < event.getHits().size(); i++) {
+    hitCounter.totalNumber++;
+
     if (fabs( event.getHits().at(i).getPosZ()) > 23)
-      {
-	passed = false;
-         return std::make_pair(Hit_Eff, false);
-      }
+    {
+       isZLessThan23 = false;
+    } else {
+      hitCounter.totalAccepted++;
+    }
   }
-   Hit_Eff->Fill(passed,2);
+  if (!isZLessThan23) return false; 
+
   stats.fillHistogram("Hit_multiplicity_cut2", event.getHits().size());
-  return std::make_pair(Hit_Eff, true);
+  return true;
   
 }
 
