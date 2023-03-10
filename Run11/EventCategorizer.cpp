@@ -83,7 +83,7 @@ bool EventCategorizer::init()
   }
 
   Event_Eff = new TEfficiency("event_eff","Event_efficiency;methods;#epsilon",20,0,10);
-  Hit_Eff = new TEfficiency("hit_eff","cut_efficiency;cuts;#epsilon",20,0,10);
+  //  Hit_Eff = new TEfficiency("hit_eff","cut_efficiency;cuts;#epsilon",20,0,10);
 
 
   // Input events type
@@ -102,27 +102,20 @@ bool EventCategorizer::exec()
        
     for (uint i = 0; i < timeWindow->getNumberOfEvents(); i++) {
       const auto& event = dynamic_cast<const JPetEvent&>(timeWindow->operator[](i));
+      TotalInitialcut.totalNumber++;
 
-      std::pair<TEfficiency*, bool> isInit = EventCategorizerTools::initialCut(
+      /*      std::pair<TEfficiency*, bool> isInit = EventCategorizerTools::initialCut(
        event, getStatistics(), fSaveControlHistos);
       Hit_Eff = std::get<0>(isInit);
-      bool isInitialCut = std::get<1>(isInit);
+      bool isInitialCut = std::get<1>(isInit);*/
+      bool isInitialCut = EventCategorizerTools::initialCut(              
+       event, getStatistics(), fSaveControlHistos, fHitCounter);
       Event_Eff->Fill(isInitialCut,1);
-
-      bool isAnnihilation;
-      bool is2Gamma, is3Gamma;
-      bool isPrompt;
-      totalEvents++;
-     
-      if (isPrompt) totalPrompts++;
+      bool isAnnihilation, is2Gamma, is3Gamma, isPrompt,isNeighbourHits;
       bool isScattered = EventCategorizerTools::checkForScatter(
-        event, getStatistics(), fSaveControlHistos, fScatterTOFTimeDiff, fTOTCalculationType
-      );
-     Event_Eff->Fill(isScattered,7);
-      if (isScattered) totalScattered++;
-      bool isNeighbourHits;
-
-     
+        event, getStatistics(), fSaveControlHistos, fScatterTOFTimeDiff, fTOTCalculationType);
+      Event_Eff->Fill(isScattered,7);
+      
       double sum_tot=0.0;
       double sum_tot_2g= 0.0;
       double sum_tot_3g=0.0;
@@ -132,7 +125,11 @@ bool EventCategorizer::exec()
       double sum_tot_ann_prompt= 0.0;
       double sum_tot_3gann_prompt=0.0;
 
-      if (isInitialCut){
+      
+
+      if (isInitialCut){TotalInitialcut.totalAccepted++;
+	fAnnihilation.totalNumber++;
+	
 	
 	isAnnihilation = EventCategorizerTools::checkForAnnihilation(
        event, getStatistics(), fSaveControlHistos);
@@ -143,7 +140,7 @@ bool EventCategorizer::exec()
 	Event_Eff->Fill(isPrompt,4);
 
        if(isAnnihilation){
-	 
+	 fAnnihilation.totalAccepted++;
 	 is2Gamma = EventCategorizerTools::checkFor2Gamma(
                     event, getStatistics(), fSaveControlHistos, fB2BSlotThetaDiff, fMaxTimeDiff
                      );
@@ -217,7 +214,11 @@ bool EventCategorizer::exec()
 bool EventCategorizer::terminate()
 {
   INFO("Event categorization completed.");
-  // std::cout <<float(totalPrompts)/totalEvents <<std::endl;
+  INFO("Total hits:" + std::to_string(fHitCounter.totalNumber));
+  INFO("Total accepted hits:" + std::to_string(fHitCounter.totalAccepted));
+  INFO("Ratio of accepted hits: " + std::to_string(fHitCounter.getRatio()));
+
+  /* // std::cout <<float(totalPrompts)/totalEvents <<std::endl;
   // std::cout <<float(totalScattered)/totalEvents <<std::endl;
   auto file1 = TFile::Open("efficiency_hit.root", "recreate");
   // if (file) std::cout << "file was created"  <<std::endl;
@@ -225,15 +226,14 @@ bool EventCategorizer::terminate()
   Hit_Eff->SetDirectory(gDirectory);
   file1->Write();
   file1->Close();
-  //  Hit_Eff= nullptr;
-  // delete Hit_Eff;
+   Hit_Eff= nullptr;
+   delete Hit_Eff;
   auto file2 = TFile::Open("efficiency_event.root", "recreate");
   Event_Eff->SetDirectory(gDirectory);
   file2->Write();
   file2->Close();
   Event_Eff = nullptr;
-  delete Event_Eff;
-  // delete Hit_Eff;
+  delete Event_Eff;*/
   return true;
   
 }

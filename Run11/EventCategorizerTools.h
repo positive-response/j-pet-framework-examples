@@ -20,6 +20,8 @@
 #include <JPetEvent/JPetEvent.h>
 #include <JPetHit/JPetHit.h>
 #include <tuple>
+#include "TEfficiency.h"
+#include "Counter.h"
 
 static const double kLightVelocity_cm_ps = 0.0299792458;
 static const double kUndefinedValue = 999.0;
@@ -41,13 +43,16 @@ public:
   static bool checkForScatter(const JPetEvent& event, JPetStatistics& stats,
                               bool saveHistos, double scatterTOFTimeDiff, 
                               std::string fTOTCalculationType);
-  static std::tuple<int, int,bool> checkForAnnihilation(const JPetEvent& event, JPetStatistics& stats,
-				   bool saveHistos);
+  // static std::pair<TEfficiency*,bool> initialCut(const JPetEvent& event, JPetStatistics& stats,
+  //				   bool saveHistos);
+  static  bool initialCut(const JPetEvent& event, JPetStatistics& stats, bool saveHistos, Counter& hitCounter);
+  static bool checkForAnnihilation(const JPetEvent& event, JPetStatistics& stats,
+                                   bool saveHistos);
   static bool removeNeighbourhits(const JPetEvent& event, JPetStatistics& stats,
                                    bool saveHistos,
                                    std::string fTOTCalculation );
-  static std::pair<int, bool> checkFor5gamma(const JPetEvent& event, JPetStatistics& stats,
-					     bool saveHistos, std::string fTOTCalculation);
+  // static std::pair<int,int, bool> checkFor5gamma(const JPetEvent& event, JPetStatistics& stats,
+  //					     bool saveHistos, std::string fTOTCalculation);
   static double calculateDistance(const JPetHit& hit1, const JPetHit& hit2);
   static double calculateScatteringTime(const JPetHit& hit1, const JPetHit& hit2);
   static double calculateScatteringAngle(const JPetHit& hit1, const JPetHit& hit2);
@@ -63,7 +68,11 @@ public:
   static TVector3 calculateAnnihilationPoint(const JPetHit& hitA, const JPetHit& hitB);
   static TVector3 calculateAnnihilationPoint(const TVector3& hitA, const TVector3& hitB, double tof);
   static double calculatePlaneCenterDistance(const JPetHit& firstHit,
-      const JPetHit& secondHit, const JPetHit& thirdHit);
+  const JPetHit& secondHit, const JPetHit& thirdHit);
+  
+  
+  //x static TEfficiency* Hit_Eff;
+
 
 };
 
