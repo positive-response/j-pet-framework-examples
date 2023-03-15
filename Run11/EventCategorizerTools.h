@@ -43,7 +43,8 @@ public:
                               bool saveHistos, double scatterTOFTimeDiff, 
                               std::string fTOTCalculationType);
   static bool checkForAnnihilation(const JPetEvent& event, JPetStatistics& stats,
-				   bool saveHistos);
+				   bool saveHistos, int atLeastNAnihilationHits);
+
   static bool removeNeighbourhits(const JPetEvent& event, JPetStatistics& stats,
                                    bool saveHistos,
                                    std::string fTOTCalculation );

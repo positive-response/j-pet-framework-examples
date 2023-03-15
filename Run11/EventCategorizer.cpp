@@ -103,26 +103,20 @@ bool EventCategorizer::exec()
     for (uint i = 0; i < timeWindow->getNumberOfEvents(); i++) {
       const auto& event = dynamic_cast<const JPetEvent&>(timeWindow->operator[](i));
 
-      auto isInitialCut = EventCategorizerTools::initialCut(
-       event, getStatistics(), fHitCounter);
-      //Event_Eff->Fill(isInitialCut,1);
 
-      bool isAnnihilation;
-      bool is2Gamma, is3Gamma;
-      bool isPrompt = true;
+      bool isAnnihilation = false;
+      bool is2Gamma =false;
+      bool is3Gamma;
+      bool isPrompt = false;
+      bool isScattered = false;
+      bool isNeighbourHits;
+      const int atLeastNAnihilation  = 2;  /// We want at leat 2 anihilation hits per event
+
       fEventPromptCounter.totalNumber++; 
       fEventAnihilationCounter.totalNumber++; 
       fEventScatteredCounter.totalNumber++; 
      
-      if (isPrompt) fEventPromptCounter.totalAccepted++;
-      bool isScattered = EventCategorizerTools::checkForScatter(
-        event, getStatistics(), fSaveControlHistos, fScatterTOFTimeDiff, fTOTCalculationType
-      );
-     //Event_Eff->Fill(isScattered,7);
-      if (isScattered) fEventScatteredCounter.totalAccepted++;
-      bool isNeighbourHits;
 
-     
       double sum_tot=0.0;
       double sum_tot_2g= 0.0;
       double sum_tot_3g=0.0;
@@ -132,36 +126,50 @@ bool EventCategorizer::exec()
       double sum_tot_ann_prompt= 0.0;
       double sum_tot_3gann_prompt=0.0;
 
-      if (isInitialCut){
-	
-       isAnnihilation = EventCategorizerTools::checkForAnnihilation(
-       event, getStatistics(), fSaveControlHistos);
-	
-	isPrompt = EventCategorizerTools::checkForPrompt(
-        event, getStatistics(), fSaveControlHistos, fDeexTOTCutMin, fDeexTOTCutMax, fTOTCalculationType);
+      auto isInitialCut = EventCategorizerTools::initialCut(
+       event, getStatistics(), fHitCounter);
+      //Event_Eff->Fill(isInitialCut,1);
 
-	Event_Eff->Fill(isPrompt,4);
+      if (isInitialCut)
+      {
 
-       if(isAnnihilation){
-	 
-	 is2Gamma = EventCategorizerTools::checkFor2Gamma(
-                    event, getStatistics(), fSaveControlHistos, fB2BSlotThetaDiff, fMaxTimeDiff
-                     );
-         is3Gamma = EventCategorizerTools::checkFor3Gamma(
-                    event, getStatistics(), fSaveControlHistos
-                    );
-	 isNeighbourHits = EventCategorizerTools::removeNeighbourhits(
-        event, getStatistics(),fSaveControlHistos, fTOTCalculationType
-      );
+        isAnnihilation = EventCategorizerTools::checkForAnnihilation(event, getStatistics(), fSaveControlHistos, atLeastNAnihilation);
 
-	   Event_Eff->Fill(isAnnihilation,2);
-	   Event_Eff->Fill(is2Gamma,5);
-	   Event_Eff->Fill(is3Gamma,6);
-	   Event_Eff->Fill(isNeighbourHits,3);
-       }
+        isPrompt =
+            EventCategorizerTools::checkForPrompt(event, getStatistics(), fSaveControlHistos, fDeexTOTCutMin, fDeexTOTCutMax, fTOTCalculationType);
+
+        Event_Eff->Fill(isPrompt, 4);
+
+        isScattered = EventCategorizerTools::checkForScatter(event, getStatistics(), fSaveControlHistos, fScatterTOFTimeDiff, fTOTCalculationType);
+
+        // Event_Eff->Fill(isScattered,7);
+        if (isScattered)
+          fEventScatteredCounter.totalAccepted++;
+        if (isPrompt)
+          fEventPromptCounter.totalAccepted++;
+
+        if (isAnnihilation)
+        {
+          fEventAnihilationCounter.totalAccepted++; 
+
+          if (!isPrompt) {
+             /// here we have events which contains at least two annihilation but no prompt
+          is2Gamma = EventCategorizerTools::checkFor2Gamma(event, getStatistics(), fSaveControlHistos, fB2BSlotThetaDiff, fMaxTimeDiff);
+          is3Gamma = EventCategorizerTools::checkFor3Gamma(event, getStatistics(), fSaveControlHistos);
+          //isNeighbourHits = EventCategorizerTools::removeNeighbourhits(event, getStatistics(), fSaveControlHistos, fTOTCalculationType);
+          } else 
+          {
+             /// here we have events which contains at least two annihilation and a prompt
+          }
+
+          Event_Eff->Fill(isAnnihilation, 2);
+          Event_Eff->Fill(is2Gamma, 5);
+          Event_Eff->Fill(is3Gamma, 6);
+          Event_Eff->Fill(isNeighbourHits, 3);
+        }
       }
-      
-       if(isNeighbourHits);
+
+       //if(isNeighbourHits);
        
       JPetEvent newEvent = event;
       if(is2Gamma){  newEvent.addEventType(JPetEventType::k2Gamma); }

@@ -158,28 +158,39 @@ bool EventCategorizerTools::checkForPrompt(
 }
 
 
-/** Method for determining type of event - Annihilation*/
+/** Method for determining type of event - Annihilation
+ *  We assume that event is "annihilation" one when it contains at least
+ *  N hits  that are anihilation hits ( < TOT for prompt)
+ *
+ **/
 
 bool EventCategorizerTools::checkForAnnihilation(
-  const JPetEvent& event, JPetStatistics& stats, bool saveHistos)
+  const JPetEvent& event, JPetStatistics& stats, bool saveHistos, int atLeastNAnihilationHits)
 {
   double tot, tota=0;
   bool t = 0;
   stats.fillHistogram("Hit_multiplicity_ann0", event.getHits().size());
-for (auto i = 0; i < event.getHits().size(); i++) {
-  tot = event.getHits().at(i).getEnergy();     
-  stats.fillHistogram("Ann_TOT_before_cut", tot);
-  if (tot > 65000)
-	 {
-	   return false;
-	 }
-  
-       tota = event.getHits().at(i).getEnergy();
-       stats.fillHistogram("Ann_TOT", tota);
+  if (event.getHits().size() < atLeastNAnihilationHits) {
+    return false;
   }
- 
+  int numberOfAnihilation = 0;
+  for (auto i = 0; i < event.getHits().size(); i++)
+  {
+    tot = event.getHits().at(i).getEnergy();
+    stats.fillHistogram("Ann_TOT_before_cut", tot);
+    if (tot < 65000)
+    {
+      numberOfAnihilation++;
+    }
+    tota = event.getHits().at(i).getEnergy();
+    stats.fillHistogram("Ann_TOT", tota);
+    if (numberOfAnihilation >= atLeastNAnihilationHits) {
+      return true;
+    }
+  }
+
   stats.fillHistogram("Hit_multiplicity_ann1", event.getHits().size());
-  return true;
+  return false;
 }
 
 /**Method for initial cuts**/
