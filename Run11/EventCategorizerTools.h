@@ -43,11 +43,9 @@ public:
   static bool checkForScatter(const JPetEvent& event, JPetStatistics& stats,
                               bool saveHistos, double scatterTOFTimeDiff, 
                               std::string fTOTCalculationType);
-  // static std::pair<TEfficiency*,bool> initialCut(const JPetEvent& event, JPetStatistics& stats,
-  //				   bool saveHistos);
   static  bool initialCut(const JPetEvent& event, JPetStatistics& stats, bool saveHistos, Counter& hitCounter);
   static bool checkForAnnihilation(const JPetEvent& event, JPetStatistics& stats,
-                                   bool saveHistos);
+                                   bool saveHistos, int atLeastNAnihilationHits, double TOT_Cut);
   static bool removeNeighbourhits(const JPetEvent& event, JPetStatistics& stats,
                                    bool saveHistos,
                                    std::string fTOTCalculation );

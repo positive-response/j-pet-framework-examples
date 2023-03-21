@@ -82,10 +82,7 @@ bool EventCategorizer::init()
     WARNING("No TOT calculation option given by the user. Using standard sum.");
   }
 
-  Event_Eff = new TEfficiency("event_eff","Event_efficiency;methods;#epsilon",20,0,10);
-  //  Hit_Eff = new TEfficiency("hit_eff","cut_efficiency;cuts;#epsilon",20,0,10);
-
-
+ 
   // Input events type
   fOutputEvents = new JPetTimeWindow("JPetEvent");
   // Initialise hisotgrams
@@ -103,18 +100,17 @@ bool EventCategorizer::exec()
     for (uint i = 0; i < timeWindow->getNumberOfEvents(); i++) {
       const auto& event = dynamic_cast<const JPetEvent&>(timeWindow->operator[](i));
       TotalInitialcut.totalNumber++;
-
-      /*      std::pair<TEfficiency*, bool> isInit = EventCategorizerTools::initialCut(
-       event, getStatistics(), fSaveControlHistos);
-      Hit_Eff = std::get<0>(isInit);
-      bool isInitialCut = std::get<1>(isInit);*/
+      
       bool isInitialCut = EventCategorizerTools::initialCut(              
        event, getStatistics(), fSaveControlHistos, fHitCounter);
-      Event_Eff->Fill(isInitialCut,1);
-      bool isAnnihilation, is2Gamma, is3Gamma, isPrompt,isNeighbourHits;
+      
       bool isScattered = EventCategorizerTools::checkForScatter(
         event, getStatistics(), fSaveControlHistos, fScatterTOFTimeDiff, fTOTCalculationType);
-      Event_Eff->Fill(isScattered,7);
+      
+      bool isAnnihilation, is2Gamma, is3Gamma, isPrompt,isNeighbourHits = false;
+
+      const int atLeastNAnihilationHits = 2;
+      const double TOT_Cut = 65000;
       
       double sum_tot=0.0;
       double sum_tot_2g= 0.0;
@@ -127,17 +123,26 @@ bool EventCategorizer::exec()
 
       
 
-      if (isInitialCut){TotalInitialcut.totalAccepted++;
+      if (isInitialCut){
+	TotalInitialcut.totalAccepted++;
 	fAnnihilation.totalNumber++;
-	
+	fEventAnnPrompt.totalNumber++;
+	fEventNoAnnPrompt.totalNumber++;
+        fEventNoPromptAnn.totalNumber++;
+	fEventNoAnnNoPrompt.totalNumber++;
+
+	 isPrompt = EventCategorizerTools::checkForPrompt(
+        event, getStatistics(), fSaveControlHistos, fDeexTOTCutMin, fDeexTOTCutMax, fTOTCalculationType);
 	
 	isAnnihilation = EventCategorizerTools::checkForAnnihilation(
-       event, getStatistics(), fSaveControlHistos);
+	event, getStatistics(), fSaveControlHistos, atLeastNAnihilationHits, TOT_Cut);
 	
-	isPrompt = EventCategorizerTools::checkForPrompt(
-        event, getStatistics(), fSaveControlHistos, fDeexTOTCutMin, fDeexTOTCutMax, fTOTCalculationType);
+      }
 
-	Event_Eff->Fill(isPrompt,4);
+      if (isAnnihilation && isPrompt ){fEventAnnPrompt.totalAccepted++; }
+      if (!isAnnihilation && isPrompt ){fEventNoAnnPrompt.totalAccepted++;}
+      if (isAnnihilation && !isPrompt ){fEventNoPromptAnn.totalAccepted++;}
+      if (!isAnnihilation && !isPrompt ){fEventNoAnnNoPrompt.totalAccepted++;}
 
        if(isAnnihilation){
 	 fAnnihilation.totalAccepted++;
@@ -150,13 +155,8 @@ bool EventCategorizer::exec()
 	 isNeighbourHits = EventCategorizerTools::removeNeighbourhits(
         event, getStatistics(),fSaveControlHistos, fTOTCalculationType
       );
-
-	   Event_Eff->Fill(isAnnihilation,2);
-	   Event_Eff->Fill(is2Gamma,5);
-	   Event_Eff->Fill(is3Gamma,6);
-	   Event_Eff->Fill(isNeighbourHits,3);
        }
-      }
+    
       
        if(isNeighbourHits);
        
@@ -217,23 +217,18 @@ bool EventCategorizer::terminate()
   INFO("Total hits:" + std::to_string(fHitCounter.totalNumber));
   INFO("Total accepted hits:" + std::to_string(fHitCounter.totalAccepted));
   INFO("Ratio of accepted hits: " + std::to_string(fHitCounter.getRatio()));
+  INFO("Ratio of accepted events(EventNoPromptAnn): " + std::to_string(fEventNoPromptAnn.getRatio()));
+  INFO("Ratio of accepted events(EventNoAnnPrompt): " + std::to_string(fEventNoAnnPrompt.getRatio()));
+  INFO("Ratio of accepted events(EventAnnPrompt): " + std::to_string(fEventAnnPrompt.getRatio()));
+  INFO("Ratio of accepted events(EventNoAnnNoPrompt):" + std::to_string(fEventNoAnnNoPrompt.getRatio()));
 
-  /* // std::cout <<float(totalPrompts)/totalEvents <<std::endl;
-  // std::cout <<float(totalScattered)/totalEvents <<std::endl;
+  /*
   auto file1 = TFile::Open("efficiency_hit.root", "recreate");
   // if (file) std::cout << "file was created"  <<std::endl;
   //Event_Eff->SetDirectory(gDirectory);
   Hit_Eff->SetDirectory(gDirectory);
   file1->Write();
-  file1->Close();
-   Hit_Eff= nullptr;
-   delete Hit_Eff;
-  auto file2 = TFile::Open("efficiency_event.root", "recreate");
-  Event_Eff->SetDirectory(gDirectory);
-  file2->Write();
-  file2->Close();
-  Event_Eff = nullptr;
-  delete Event_Eff;*/
+  file1->Close();*/
   return true;
   
 }

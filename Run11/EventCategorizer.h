@@ -51,10 +51,10 @@ protected:
 	const std::string kMaxTimeDiffParamKey = "EventCategorizer_MaxTimeDiff_float";
 	const std::string kSaveControlHistosParamKey = "Save_Control_Histograms_bool";
         const std::string kTOTCalculationType = "HitFinder_TOTCalculationType_std::string";
-        TEfficiency* Event_Eff = nullptr;
-	TEfficiency* Hit_Eff = nullptr;
+        
        
 	Counter fHitCounter, TotalInitialcut, fAnnihilation;
+	Counter fEventPromptCounter, fEventAnihilationCounter, fEventScatteredCounter, fEventNoPromptAnn, fEventNoAnnPrompt, fEventAnnPrompt, fEventNoAnnNoPrompt;
 	void saveEvents(const std::vector<JPetEvent>& event);
 	double fScatterTOFTimeDiff = 2000.0;
 	double fB2BSlotThetaDiff = 3.0;

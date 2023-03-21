@@ -137,24 +137,20 @@ bool EventCategorizerTools::checkForPrompt(
   double deexTOTCutMin, double deexTOTCutMax, std::string fTOTCalculationType)
 {
 
-  stats.fillHistogram("Hit_multiplicity_prompt", event.getHits().size());
-  double tot;
+  // stats.fillHistogram("Hit_multiplicity_prompt", event.getHits().size());
+  double tot = 0.0;
   for (auto i = 0; i < event.getHits().size(); i++) {
-    if(fabs(event.getHits().at(i).getPosZ()) > 23)
-      {
-        return false;
-      }
- 
     tot = event.getHits().at(i).getEnergy();
     stats.fillHistogram("SYNC_TOT", tot);
-  }
+    
     if (tot > deexTOTCutMin && tot < deexTOTCutMax){
 	if (saveHistos){
 	 stats.fillHistogram("Deex_TOT_cut", tot);
-       //stats.fillHistogram("Hit_multiplicity_prompt", event.getHits().size());
 	}
 	return true;
     }
+  }
+  stats.fillHistogram("Hit_multiplicity_prompt", event.getHits().size());
     return false;
 }
 
@@ -162,37 +158,48 @@ bool EventCategorizerTools::checkForPrompt(
 /** Method for determining type of event - Annihilation*/
 
 bool EventCategorizerTools::checkForAnnihilation(
-  const JPetEvent& event, JPetStatistics& stats, bool saveHistos)
+const JPetEvent& event, JPetStatistics& stats, bool saveHistos, int atLeastNAnihilationHits, double TOT_Cut)
 {
+  int numberOfAnnihilation = 0;
   double tot, tota=0;
-  bool t = 0;
-  stats.fillHistogram("Hit_multiplicity_ann0", event.getHits().size());
-for (auto i = 0; i < event.getHits().size(); i++) {
+  
+  // stats.fillHistogram("Hit_multiplicity_ann0", event.getHits().size());
+  if (event.getHits().size() < atLeastNAnihilationHits)
+    {
+      return false;
+    }
+  
+  for (auto i = 0; i < event.getHits().size(); i++) {
   tot = event.getHits().at(i).getEnergy();     
   stats.fillHistogram("Ann_TOT_before_cut", tot);
-  if (tot > 65000)
-	 {
-	   return false;
-	 }
   
+  if (tot < TOT_Cut)
+	 {
+	   numberOfAnnihilation++;
+	 }
        tota = event.getHits().at(i).getEnergy();
-       stats.fillHistogram("Ann_TOT", tota);
+       stats.fillHistogram("Hit_multiplicity_ann0", event.getHits().size());
+      
+       if (numberOfAnnihilation>=atLeastNAnihilationHits)
+	 {
+	   stats.fillHistogram("Ann_TOT", tota);
+	   return true;
+	 }
   }
  
   stats.fillHistogram("Hit_multiplicity_ann1", event.getHits().size());
-  return true;
+  return false;
 }
 
 /**Method for initial cuts**/
 
-//std::pair<TEfficiency*, bool> EventCategorizerTools::initialCut(
-// const JPetEvent& event, JPetStatistics& stats, bool saveHistos)
+
 bool EventCategorizerTools::initialCut(                                   
 const JPetEvent& event, JPetStatistics& stats, bool saveHistos, Counter& hitCounter)
 {
-  // TEfficiency* Hit_Eff = new TEfficiency("hit_eff","efficiency;cuts;#epsilon",20,0,10);
+ 
   stats.fillHistogram("Hit_multiplicity_0", event.getHits().size());
-  if (event.getHits().size() != 2 )
+  if (event.getHits().size() < 2 )
     {
       hitCounter.totalNumber++;
       return false;
