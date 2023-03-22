@@ -48,10 +48,6 @@ protected:
         TEfficiency* Event_Eff = nullptr; 
         TEfficiency* Hit_Eff = nullptr;	
 
-        Counter fEventPromptCounter;
-        Counter fEventScatteredCounter;
-        Counter fEventAnihilationCounter;
-        Counter fHitCounter;
         const std::string kBack2BackSlotThetaDiffParamKey = "Back2Back_Categorizer_SlotThetaDiff_float";
 	const std::string kScatterTOFTimeDiffParamKey = "Scatter_Categorizer_TOF_TimeDiff_float";
 	const std::string kDeexTOTCutMinParamKey = "Deex_Categorizer_TOT_Cut_Min_float";
