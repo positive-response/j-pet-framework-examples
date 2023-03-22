@@ -99,8 +99,17 @@ bool EventCategorizer::exec()
        
     for (uint i = 0; i < timeWindow->getNumberOfEvents(); i++) {
       const auto& event = dynamic_cast<const JPetEvent&>(timeWindow->operator[](i));
+
+
+      const int atLeastNAnihilation  = 2;  /// We want at leat 2 anihilation hits per event
+
+      fEventPromptCounter.totalNumber++; 
+      fEventAnihilationCounter.totalNumber++; 
+      fEventScatteredCounter.totalNumber++; 
+     
       TotalInitialcut.totalNumber++;
       
+
       bool isInitialCut = EventCategorizerTools::initialCut(              
        event, getStatistics(), fSaveControlHistos, fHitCounter);
       
@@ -120,9 +129,7 @@ bool EventCategorizer::exec()
       double sum_tot_prompt=0.0;
       double sum_tot_ann=0.0;
       double sum_tot_ann_prompt= 0.0;
-      double sum_tot_3gann_prompt=0.0;
-
-      
+      double sum_tot_3gann_prompt=0.0;      
 
       if (isInitialCut){
 	TotalInitialcut.totalAccepted++;
@@ -159,7 +166,7 @@ bool EventCategorizer::exec()
        }
     
       
-       if(isNeighbourHits);
+      if(isNeighbourHits);
        
       JPetEvent newEvent = event;
       if(is2Gamma){  newEvent.addEventType(JPetEventType::k2Gamma); }

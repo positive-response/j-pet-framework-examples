@@ -16,6 +16,7 @@
 #ifndef EVENTCATEGORIZERTOOLS_H
 #define EVENTCATEGORIZERTOOLS_H
 
+#include "Counter.h"
 #include <JPetStatistics/JPetStatistics.h>
 #include <JPetEvent/JPetEvent.h>
 #include <JPetHit/JPetHit.h>
@@ -39,7 +40,7 @@ public:
   static bool checkFor3Gamma(const JPetEvent& event, JPetStatistics& stats, bool saveHistos);
   static bool checkForPrompt(const JPetEvent& event, JPetStatistics& stats,
                              bool saveHistos, double deexTOTCutMin, double deexTOTCutMax, 
-                             std::string fTOTCalculationType);
+                             std::string fTOTCalculationType, int atleastNprompt);
   static bool checkForScatter(const JPetEvent& event, JPetStatistics& stats,
                               bool saveHistos, double scatterTOFTimeDiff, 
                               std::string fTOTCalculationType);
@@ -71,6 +72,8 @@ public:
   
   //x static TEfficiency* Hit_Eff;
 
+
+  static bool initialCut( const JPetEvent& event, JPetStatistics& stats, Counter& hitCounter);
 
 };
 

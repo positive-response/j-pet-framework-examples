@@ -24,7 +24,6 @@
 
 
 using namespace std;
-int hcounta;
 /**
 
 * Method for determining type of event - back to back 2 gamma
@@ -160,7 +159,11 @@ bool EventCategorizerTools::checkForPrompt(
 }
 
 
-/** Method for determining type of event - Annihilation*/
+/** Method for determining type of event - Annihilation
+ *  We assume that event is "annihilation" one when it contains at least
+ *  N hits  that are anihilation hits ( < TOT for prompt)
+ *
+ **/
 
 bool EventCategorizerTools::checkForAnnihilation(
 const JPetEvent& event, JPetStatistics& stats, bool saveHistos, int atLeastNAnihilationHits, double TOT_Cut)
@@ -191,7 +194,7 @@ const JPetEvent& event, JPetStatistics& stats, bool saveHistos, int atLeastNAnih
 	   return true;
 	 }
   }
- 
+
   stats.fillHistogram("Hit_multiplicity_ann1", event.getHits().size());
   return false;
 }

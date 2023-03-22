@@ -18,6 +18,7 @@
 
 #include <JPetUserTask/JPetUserTask.h>
 #include "EventCategorizerTools.h"
+#include "Counter.h"
 #include <JPetEvent/JPetEvent.h>
 #include <JPetHit/JPetHit.h>
 #include <vector>
@@ -44,7 +45,10 @@ public:
 	virtual bool terminate() override;
 
 protected:
-	const std::string kBack2BackSlotThetaDiffParamKey = "Back2Back_Categorizer_SlotThetaDiff_float";
+        TEfficiency* Event_Eff = nullptr; 
+        TEfficiency* Hit_Eff = nullptr;	
+
+        const std::string kBack2BackSlotThetaDiffParamKey = "Back2Back_Categorizer_SlotThetaDiff_float";
 	const std::string kScatterTOFTimeDiffParamKey = "Scatter_Categorizer_TOF_TimeDiff_float";
 	const std::string kDeexTOTCutMinParamKey = "Deex_Categorizer_TOT_Cut_Min_float";
 	const std::string kDeexTOTCutMaxParamKey = "Deex_Categorizer_TOT_Cut_Max_float";
