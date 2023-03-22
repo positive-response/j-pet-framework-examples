@@ -1,4 +1,3 @@
-
 /**
  *  @copyright Copyright 2020 The J-PET Framework Authors. All rights reserved.
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -134,22 +133,28 @@ bool EventCategorizerTools::checkFor3Gamma(const JPetEvent& event, JPetStatistic
 */
 bool EventCategorizerTools::checkForPrompt(
   const JPetEvent& event, JPetStatistics& stats, bool saveHistos,
-  double deexTOTCutMin, double deexTOTCutMax, std::string fTOTCalculationType)
+  double deexTOTCutMin, double deexTOTCutMax, std::string fTOTCalculationType, int atleastNprompt)
 {
-
+  int NumberOfPrompts = 0;
   // stats.fillHistogram("Hit_multiplicity_prompt", event.getHits().size());
   double tot = 0.0;
+  
   for (auto i = 0; i < event.getHits().size(); i++) {
+    
     tot = event.getHits().at(i).getEnergy();
     stats.fillHistogram("SYNC_TOT", tot);
     
     if (tot > deexTOTCutMin && tot < deexTOTCutMax){
-	if (saveHistos){
-	 stats.fillHistogram("Deex_TOT_cut", tot);
-	}
-	return true;
+      NumberOfPrompts++;
+      stats.fillHistogram("Deex_TOT_cut", tot);
     }
+    
+    if (NumberOfPrompts >= atleastNprompt)
+      {	
+	return true;
+      }
   }
+  
   stats.fillHistogram("Hit_multiplicity_prompt", event.getHits().size());
     return false;
 }
@@ -161,7 +166,7 @@ bool EventCategorizerTools::checkForAnnihilation(
 const JPetEvent& event, JPetStatistics& stats, bool saveHistos, int atLeastNAnihilationHits, double TOT_Cut)
 {
   int numberOfAnnihilation = 0;
-  double tot, tota=0;
+  double tot, tota = 0.0;
   
   // stats.fillHistogram("Hit_multiplicity_ann0", event.getHits().size());
   if (event.getHits().size() < atLeastNAnihilationHits)

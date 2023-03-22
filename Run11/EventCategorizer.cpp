@@ -111,6 +111,7 @@ bool EventCategorizer::exec()
 
       const int atLeastNAnihilationHits = 2;
       const double TOT_Cut = 65000;
+      const int atleastNprompt = 1;
       
       double sum_tot=0.0;
       double sum_tot_2g= 0.0;
@@ -132,7 +133,7 @@ bool EventCategorizer::exec()
 	fEventNoAnnNoPrompt.totalNumber++;
 
 	 isPrompt = EventCategorizerTools::checkForPrompt(
-        event, getStatistics(), fSaveControlHistos, fDeexTOTCutMin, fDeexTOTCutMax, fTOTCalculationType);
+	 event, getStatistics(), fSaveControlHistos, fDeexTOTCutMin, fDeexTOTCutMax, fTOTCalculationType, atleastNprompt);
 	
 	isAnnihilation = EventCategorizerTools::checkForAnnihilation(
 	event, getStatistics(), fSaveControlHistos, atLeastNAnihilationHits, TOT_Cut);
