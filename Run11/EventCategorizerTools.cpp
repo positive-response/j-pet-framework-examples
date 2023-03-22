@@ -1,4 +1,3 @@
-
 /**
  *  @copyright Copyright 2020 The J-PET Framework Authors. All rights reserved.
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -133,27 +132,29 @@ bool EventCategorizerTools::checkFor3Gamma(const JPetEvent& event, JPetStatistic
 */
 bool EventCategorizerTools::checkForPrompt(
   const JPetEvent& event, JPetStatistics& stats, bool saveHistos,
-  double deexTOTCutMin, double deexTOTCutMax, std::string fTOTCalculationType)
+  double deexTOTCutMin, double deexTOTCutMax, std::string fTOTCalculationType, int atleastNprompt)
 {
-
-  stats.fillHistogram("Hit_multiplicity_prompt", event.getHits().size());
-  double tot;
+  int NumberOfPrompts = 0;
+  // stats.fillHistogram("Hit_multiplicity_prompt", event.getHits().size());
+  double tot = 0.0;
+  
   for (auto i = 0; i < event.getHits().size(); i++) {
-    if(fabs(event.getHits().at(i).getPosZ()) > 23)
-      {
-        return false;
-      }
- 
+    
     tot = event.getHits().at(i).getEnergy();
     stats.fillHistogram("SYNC_TOT", tot);
-  }
+    
     if (tot > deexTOTCutMin && tot < deexTOTCutMax){
-	if (saveHistos){
-	 stats.fillHistogram("Deex_TOT_cut", tot);
-       //stats.fillHistogram("Hit_multiplicity_prompt", event.getHits().size());
-	}
-	return true;
+      NumberOfPrompts++;
+      stats.fillHistogram("Deex_TOT_cut", tot);
     }
+    
+    if (NumberOfPrompts >= atleastNprompt)
+      {	
+	return true;
+      }
+  }
+  
+  stats.fillHistogram("Hit_multiplicity_prompt", event.getHits().size());
     return false;
 }
 
@@ -165,28 +166,33 @@ bool EventCategorizerTools::checkForPrompt(
  **/
 
 bool EventCategorizerTools::checkForAnnihilation(
-  const JPetEvent& event, JPetStatistics& stats, bool saveHistos, int atLeastNAnihilationHits)
+const JPetEvent& event, JPetStatistics& stats, bool saveHistos, int atLeastNAnihilationHits, double TOT_Cut)
 {
-  double tot, tota=0;
-  bool t = 0;
-  stats.fillHistogram("Hit_multiplicity_ann0", event.getHits().size());
-  if (event.getHits().size() < atLeastNAnihilationHits) {
-    return false;
-  }
-  int numberOfAnihilation = 0;
-  for (auto i = 0; i < event.getHits().size(); i++)
-  {
-    tot = event.getHits().at(i).getEnergy();
-    stats.fillHistogram("Ann_TOT_before_cut", tot);
-    if (tot < 65000)
+  int numberOfAnnihilation = 0;
+  double tot, tota = 0.0;
+  
+  // stats.fillHistogram("Hit_multiplicity_ann0", event.getHits().size());
+  if (event.getHits().size() < atLeastNAnihilationHits)
     {
-      numberOfAnihilation++;
+      return false;
     }
-    tota = event.getHits().at(i).getEnergy();
-    stats.fillHistogram("Ann_TOT", tota);
-    if (numberOfAnihilation >= atLeastNAnihilationHits) {
-      return true;
-    }
+  
+  for (auto i = 0; i < event.getHits().size(); i++) {
+  tot = event.getHits().at(i).getEnergy();     
+  stats.fillHistogram("Ann_TOT_before_cut", tot);
+  
+  if (tot < TOT_Cut)
+	 {
+	   numberOfAnnihilation++;
+	 }
+       tota = event.getHits().at(i).getEnergy();
+       stats.fillHistogram("Hit_multiplicity_ann0", event.getHits().size());
+      
+       if (numberOfAnnihilation>=atLeastNAnihilationHits)
+	 {
+	   stats.fillHistogram("Ann_TOT", tota);
+	   return true;
+	 }
   }
 
   stats.fillHistogram("Hit_multiplicity_ann1", event.getHits().size());
@@ -195,35 +201,38 @@ bool EventCategorizerTools::checkForAnnihilation(
 
 /**Method for initial cuts**/
 
-bool EventCategorizerTools::initialCut(
-  const JPetEvent& event, JPetStatistics& stats, Counter& hitCounter)
+
+bool EventCategorizerTools::initialCut(                                   
+const JPetEvent& event, JPetStatistics& stats, bool saveHistos, Counter& hitCounter)
 {
+ 
   stats.fillHistogram("Hit_multiplicity_0", event.getHits().size());
-  
   if (event.getHits().size() < 2 )
     {
       hitCounter.totalNumber++;
       return false;
-    }                                                                                                                                                                                                       
+    }                                                                                                                                                                                                   
   stats.fillHistogram("Hit_multiplicity_cut1", event.getHits().size()); 
- 
-  bool isZLessThan23 = true; 
+  bool isZLessThan23 = true;
   for (auto i = 0; i < event.getHits().size(); i++) {
     hitCounter.totalNumber++;
-
     if (fabs( event.getHits().at(i).getPosZ()) > 23)
-    {
-       isZLessThan23 = false;
-    } else {
+      {
+	isZLessThan23 = false;
+      }
+    else{
       hitCounter.totalAccepted++;
     }
   }
-  if (!isZLessThan23) return false; 
+  if (!isZLessThan23)	
+    {
+      return false;
+    }
 
   stats.fillHistogram("Hit_multiplicity_cut2", event.getHits().size());
   return true;
-  
 }
+  
 
 
 
