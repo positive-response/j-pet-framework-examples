@@ -1,5 +1,5 @@
 message(STATUS "")
-message(STATUS "Starting to configure LargeBarrelAnalysisTests..")
+message(STATUS "Starting to configure Run11Tests..")
 message(STATUS "")
 enable_testing()
 
@@ -34,12 +34,12 @@ macro(package_add_test TESTNAME)
     target_link_libraries(${TESTNAME}.x JPetFramework::JPetFramework Boost::unit_test_framework)
     add_test(NAME ${TESTNAME}.x COMMAND ${TESTNAME}.x --log_level=error --log_format=XML --log_sink=${TESTNAME}.xml)
     set_target_properties(${TESTNAME}.x PROPERTIES FOLDER tests)
-    add_dependencies(${TESTNAME}.x link_target_largebarrelanalysis)
+    add_dependencies(${TESTNAME}.x link_target_run11)
 endmacro()
 
 
 ## Add custom target to create symlink from test dir to unitTestData
-add_custom_target(link_target_largebarrelanalysis ALL
+add_custom_target(link_target_run11 ALL
                   COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_CURRENT_SOURCE_DIR}/../../unitTestData ${CMAKE_CURRENT_BINARY_DIR}/unitTestData)
 
 
@@ -62,4 +62,4 @@ foreach(test_source IN ITEMS ${UNIT_TEST_SOURCES})
     list(APPEND tests_names ${test}.x)
 endforeach()
 
-add_custom_target(tests_largebarrel DEPENDS ${tests_names})
+add_custom_target(tests_run11 DEPENDS ${tests_names})
