@@ -1,4 +1,4 @@
-/**
+\65;6003;1c/**
  *  @copyright Copyright 2020 The J-PET Framework Authors. All rights reserved.
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -104,10 +104,15 @@ bool EventCategorizer::exec()
       bool isInitialCut = EventCategorizerTools::initialCut(              
        event, getStatistics(), fSaveControlHistos, fHitCounter);
       
-      bool isScattered = EventCategorizerTools::checkForScatter(
-        event, getStatistics(), fSaveControlHistos, fScatterTOFTimeDiff, fTOTCalculationType);
-      
-      bool isAnnihilation, is2Gamma, is3Gamma, isPrompt,isNeighbourHits = false;
+      bool isScattered1 = false;
+      bool isScattered2 = false;
+      bool isScattered3 = false;
+      bool isScattered4 = false; 
+      bool isAnnihilation = false;
+      bool is2Gamma= false;
+      bool is3Gamma= false;
+      bool isPrompt= false;
+      bool isNeighbourHits= false;
 
       const int atLeastNAnihilationHits = 2;
       const double TOT_Cut = 65000;
@@ -127,6 +132,7 @@ bool EventCategorizer::exec()
       if (isInitialCut){
 	TotalInitialcut.totalAccepted++;
 	fAnnihilation.totalNumber++;
+	fPrompt.totalNumber++;
 	fEventAnnPrompt.totalNumber++;
 	fEventNoAnnPrompt.totalNumber++;
         fEventNoPromptAnn.totalNumber++;
@@ -137,27 +143,87 @@ bool EventCategorizer::exec()
 	
 	isAnnihilation = EventCategorizerTools::checkForAnnihilation(
 	event, getStatistics(), fSaveControlHistos, atLeastNAnihilationHits, TOT_Cut);
+
+	if (isAnnihilation) { fAnnihilation.totalAccepted++;}
+	if(isPrompt){fPrompt.totalAccepted++;}
 	
-      }
+	/* Categories of events left after initial  cut */
+	
+	if (isAnnihilation && isPrompt ){
+	  fEventAnnPrompt.totalAccepted++;
+	  case1.totalNumber++;
 
-      if (isAnnihilation && isPrompt ){fEventAnnPrompt.totalAccepted++; }
-      if (!isAnnihilation && isPrompt ){fEventNoAnnPrompt.totalAccepted++;}
-      if (isAnnihilation && !isPrompt ){fEventNoPromptAnn.totalAccepted++;}
-      if (!isAnnihilation && !isPrompt ){fEventNoAnnNoPrompt.totalAccepted++;}
+	  isScattered1 = EventCategorizerTools::checkForScatter(
+          event, getStatistics(), fSaveControlHistos, fScatterTOFTimeDiff, fTOTCalculationType);
 
-       if(isAnnihilation){
-	 fAnnihilation.totalAccepted++;
-	 is2Gamma = EventCategorizerTools::checkFor2Gamma(
-                    event, getStatistics(), fSaveControlHistos, fB2BSlotThetaDiff, fMaxTimeDiff
-                     );
-         is3Gamma = EventCategorizerTools::checkFor3Gamma(
-                    event, getStatistics(), fSaveControlHistos
-                    );
-	 isNeighbourHits = EventCategorizerTools::removeNeighbourhits(
-        event, getStatistics(),fSaveControlHistos, fTOTCalculationType
-      );
-       }
+	  if (!isScattered1)
+	    {
+	      case1.totalAccepted++;
+	      
+	    }
+	}
+	
+        if (!isAnnihilation && isPrompt ){
+	  fEventNoAnnPrompt.totalAccepted++;
+	  case2.totalNumber++;
+	  
+	  isScattered2 = EventCategorizerTools::checkForScatter(
+          event, getStatistics(), fSaveControlHistos, fScatterTOFTimeDiff, fTOTCalculationType);
+
+	  if (!isScattered2)
+            {
+	      case2.totalAccepted++;
+
+            }
+	}
+	
+        if (isAnnihilation && !isPrompt ){
+	  fEventNoPromptAnn.totalAccepted++;
+	  case3.totalNumber++;
+	  
+	  isScattered3 = EventCategorizerTools::checkForScatter(
+          event, getStatistics(), fSaveControlHistos, fScatterTOFTimeDiff, fTOTCalculationType);
+
+	  if (!isScattered3)
+            {
+	      case3.totalAccepted++;
+
+            }
+	  
+	}
+	
+        if (!isAnnihilation && !isPrompt ){
+	  fEventNoAnnNoPrompt.totalAccepted++;
+	  case4.totalNumber++;
+	  
+	  isScattered4 = EventCategorizerTools::checkForScatter(
+          event, getStatistics(), fSaveControlHistos, fScatterTOFTimeDiff, fTOTCalculationType);
+
+	  if (!isScattered4)
+            {
+	      case4.totalAccepted++;
+
+            }
+	}
+
+	
+	
+
+	/*
+        if(isAnnihilation){
+		 fAnnihilation.totalAccepted++;
+		 is2Gamma = EventCategorizerTools::checkFor2Gamma(
+			    event, getStatistics(), fSaveControlHistos, fB2BSlotThetaDiff, fMaxTimeDiff
+			     );
+		 is3Gamma = EventCategorizerTools::checkFor3Gamma(
+			    event, getStatistics(), fSaveControlHistos
+			    );
+		 isNeighbourHits = EventCategorizerTools::removeNeighbourhits(
+		event, getStatistics(),fSaveControlHistos, fTOTCalculationType);
+		}*/
+	
     
+      }
       
        if(isNeighbourHits);
        
@@ -165,7 +231,7 @@ bool EventCategorizer::exec()
       if(is2Gamma){  newEvent.addEventType(JPetEventType::k2Gamma); }
       if(is3Gamma){  newEvent.addEventType(JPetEventType::k3Gamma); }
       if(isPrompt) newEvent.addEventType(JPetEventType::kPrompt);
-      if(isScattered) newEvent.addEventType(JPetEventType::kScattered);
+      // if(isScattered) newEvent.addEventType(JPetEventType::kScattered);
       
       
       if(fSaveControlHistos){
@@ -182,8 +248,8 @@ bool EventCategorizer::exec()
 	  if(is3Gamma) sum_tot_3g += tot;	  
 	  if(is2Gamma || is3Gamma) sum_tot_ann += tot;      
 	  if(isPrompt) sum_tot_prompt += tot;
-	  if(isScattered) sum_tot_scatter += tot;
-	  if(!isScattered) sum_tot_ann_prompt += tot;
+	  if(isScattered1) sum_tot_scatter += tot;
+	  if(!isScattered1) sum_tot_ann_prompt += tot;
 	  if(is3Gamma || isPrompt) sum_tot_3gann_prompt +=tot;
 
 	     //Filling of sum TOT
@@ -215,13 +281,21 @@ bool EventCategorizer::exec()
 bool EventCategorizer::terminate()
 {
   INFO("Event categorization completed.");
-  INFO("Total hits:" + std::to_string(fHitCounter.totalNumber));
-  INFO("Total accepted hits:" + std::to_string(fHitCounter.totalAccepted));
-  INFO("Ratio of accepted hits: " + std::to_string(fHitCounter.getRatio()));
+  // INFO("Total hits:" + std::to_string(fHitCounter.totalNumber));
+  // INFO("Total accepted hits:" + std::to_string(fHitCounter.totalAccepted));
+  // INFO("Ratio of accepted hits: " + std::to_string(fHitCounter.getRatio()));
+  INFO("Efficiency of 1st cut: "+ std::to_string(TotalInitialcut.getRatio()));
+  INFO("Fraction of prompt events: "+ std::to_string(fPrompt.getRatio()));
+  INFO("Fraction of Annihilation events: "+ std::to_string(fAnnihilation.getRatio()));
+  INFO("Efficiency of 1st Case: "+ std::to_string(case1.getRatio()));
+  INFO("Efficiency of 2nd Case: "+ std::to_string(case2.getRatio()));
+  INFO("Efficiency of 3rd Case: "+ std::to_string(case3.getRatio()));
+  INFO("Efficiency of 4th Case: "+ std::to_string(case4.getRatio()));
   INFO("Ratio of accepted events(EventNoPromptAnn): " + std::to_string(fEventNoPromptAnn.getRatio()));
   INFO("Ratio of accepted events(EventNoAnnPrompt): " + std::to_string(fEventNoAnnPrompt.getRatio()));
   INFO("Ratio of accepted events(EventAnnPrompt): " + std::to_string(fEventAnnPrompt.getRatio()));
   INFO("Ratio of accepted events(EventNoAnnNoPrompt):" + std::to_string(fEventNoAnnNoPrompt.getRatio()));
+  fEventPromptCounter, fEventAnihilationCounter, fEventScatteredCounter, fEventNoPromptAnn, fEventNoAnnPrompt, fEventAnnPrompt, fEventNoAnnNoPrompt = {};
 
   /*
   auto file1 = TFile::Open("efficiency_hit.root", "recreate");
@@ -401,6 +475,20 @@ getStatistics().createHistogramWithAxes(
 
 
   // Histograms for scattering category
+  getStatistics().createHistogramWithAxes(
+    new TH2D("ScatterAngle_PrimaryTOT_before", "Angle of scattering vs. TOT of primary hits_before_cut",
+    200, -0.5, 199.5, 200, -100.0, 39900.0),
+    "Scattering Angle", "TOT of primary hit [ps]"
+  );
+
+  getStatistics().createHistogramWithAxes(
+    new TH2D("ScatterAngle_ScatterTOT_before", "Angle of scattering vs. TOT of scattered hits_before_cut",
+    200, -0.5, 199.5, 200, -100.0, 39900.0),
+    "Scattering Angle", "TOT of scattered hit [ps]"
+  );
+
+
+  
   getStatistics().createHistogramWithAxes(
     new TH1D("ScatterTOF_TimeDiff", "Difference of Scatter TOF and hits time difference",
     3.0*fScatterTOFTimeDiff, -0.5, 3.0*fScatterTOFTimeDiff-0.5),

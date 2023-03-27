@@ -53,8 +53,23 @@ protected:
         const std::string kTOTCalculationType = "HitFinder_TOTCalculationType_std::string";
         
        
-	Counter fHitCounter, TotalInitialcut, fAnnihilation;
-	Counter fEventPromptCounter, fEventAnihilationCounter, fEventScatteredCounter, fEventNoPromptAnn, fEventNoAnnPrompt, fEventAnnPrompt, fEventNoAnnNoPrompt;
+	Counter fHitCounter = {};
+	Counter TotalInitialcut = {};
+	Counter fAnnihilation = {};
+	Counter fPrompt = {};
+	Counter fEventPromptCounter = {};
+	Counter fEventAnihilationCounter = {};
+	Counter fEventScatteredCounter = {};
+	Counter fEventNoPromptAnn = {};
+	Counter fEventNoAnnPrompt = {};
+	Counter fEventAnnPrompt = {};
+	Counter fEventNoAnnNoPrompt = {};
+
+	Counter case1 = {};
+	Counter case2 = {};
+	Counter case3 = {};
+	Counter case4 = {};
+	
 	void saveEvents(const std::vector<JPetEvent>& event);
 	double fScatterTOFTimeDiff = 2000.0;
 	double fB2BSlotThetaDiff = 3.0;

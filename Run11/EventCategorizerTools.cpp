@@ -138,6 +138,11 @@ bool EventCategorizerTools::checkForPrompt(
   int NumberOfPrompts = 0;
   // stats.fillHistogram("Hit_multiplicity_prompt", event.getHits().size());
   double tot = 0.0;
+
+  if (event.getHits().size() < atleastNprompt)
+    {
+      return false;
+    }
   
   for (auto i = 0; i < event.getHits().size(); i++) {
     
@@ -166,7 +171,8 @@ bool EventCategorizerTools::checkForAnnihilation(
 const JPetEvent& event, JPetStatistics& stats, bool saveHistos, int atLeastNAnihilationHits, double TOT_Cut)
 {
   int numberOfAnnihilation = 0;
-  double tot, tota = 0.0;
+  double tot = 0.0;
+  double tota = 0.0;
   
   // stats.fillHistogram("Hit_multiplicity_ann0", event.getHits().size());
   if (event.getHits().size() < atLeastNAnihilationHits)
@@ -239,13 +245,6 @@ bool EventCategorizerTools::removeNeighbourhits(
   std::string fTOTCalculationType)
 {
   vector<JPetHit> hits = event.getHits();
-  /* for (auto i = 0; i < event.getHits().size(); i++)
-    {
-       double tot = hits[i].getEnergy();
-       if (tot > 65000)
-         return false;
-       
-	 }*/
  if (event.getHits().size() == 2)
    {
      
@@ -297,7 +296,6 @@ bool EventCategorizerTools::removeNeighbourhits(
             stats.fillHistogram("distance_vs_time_diff", distance, del_time);
                 }
            }
-  // Hit_Eff->Fill(true,1); 
   return true;
   
   
@@ -489,10 +487,7 @@ const JPetEvent& event, JPetStatistics& stats, bool saveHistos)
 bool EventCategorizerTools::checkForScatter(
   const JPetEvent& event, JPetStatistics& stats, bool saveHistos, double scatterTOFTimeDiff, 
   std::string fTOTCalculationType)
-{
-  if (event.getHits().size() < 2) {
-    return false;
-  }
+{  
   for (auto i = 0; i < event.getHits().size(); i++) {
     for (auto j = i + 1; j < event.getHits().size(); j++) {
      JPetHit primaryHit, scatterHit;
@@ -504,12 +499,23 @@ bool EventCategorizerTools::checkForScatter(
         scatterHit = event.getHits().at(i);
       }
 
+      if (abs(primaryHit.getScintillator().getID() - scatterHit.getScintillator().getID()) <= 2)
+        {
+          return true;
+        }
+
+
       double scattAngle = calculateScatteringAngle(primaryHit, scatterHit);
       double scattTOF = calculateScatteringTime(primaryHit, scatterHit);
       double timeDiff = scatterHit.getTime() - primaryHit.getTime();
 
+ 
+
       if (saveHistos) {
         stats.fillHistogram("ScatterTOF_TimeDiff", fabs(scattTOF - timeDiff));
+	stats.fillHistogram("ScatterAngle_PrimaryTOT_before", scattAngle, primaryHit.getEnergy());
+	stats.fillHistogram("ScatterAngle_ScatterTOT_before", scattAngle, scatterHit.getEnergy());
+
       }
 
       if (fabs(scattTOF - timeDiff) < scatterTOFTimeDiff) {
