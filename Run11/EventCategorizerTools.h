@@ -39,7 +39,7 @@ public:
   static bool checkFor3Gamma(const JPetEvent& event, JPetStatistics& stats, bool saveHistos);
   static bool checkForPrompt(const JPetEvent& event, JPetStatistics& stats,
                              bool saveHistos, double deexTOTCutMin, double deexTOTCutMax, 
-                             std::string fTOTCalculationType);
+                             std::string fTOTCalculationType, int atleastNprompt);
   static bool checkForScatter(const JPetEvent& event, JPetStatistics& stats,
                               bool saveHistos, double scatterTOFTimeDiff, 
                               std::string fTOTCalculationType);

@@ -1,4 +1,4 @@
-\65;6003;1c/**
+/**
  *  @copyright Copyright 2020 The J-PET Framework Authors. All rights reserved.
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -19,7 +19,6 @@
 #include "EventCategorizer.h"
 #include <iostream>
 #include <tuple>
-#include "TEfficiency.h"
 
 
 using namespace jpet_options_tools;
@@ -104,10 +103,7 @@ bool EventCategorizer::exec()
       bool isInitialCut = EventCategorizerTools::initialCut(              
        event, getStatistics(), fSaveControlHistos, fHitCounter);
       
-      bool isScattered1 = false;
-      bool isScattered2 = false;
-      bool isScattered3 = false;
-      bool isScattered4 = false; 
+      bool isScattered = false;
       bool isAnnihilation = false;
       bool is2Gamma= false;
       bool is3Gamma= false;
@@ -130,102 +126,72 @@ bool EventCategorizer::exec()
       
 
       if (isInitialCut){
+	
 	TotalInitialcut.totalAccepted++;
 	fAnnihilation.totalNumber++;
 	fPrompt.totalNumber++;
-	fEventAnnPrompt.totalNumber++;
-	fEventNoAnnPrompt.totalNumber++;
-        fEventNoPromptAnn.totalNumber++;
-	fEventNoAnnNoPrompt.totalNumber++;
-
-	 isPrompt = EventCategorizerTools::checkForPrompt(
-	 event, getStatistics(), fSaveControlHistos, fDeexTOTCutMin, fDeexTOTCutMax, fTOTCalculationType, atleastNprompt);
 	
-	isAnnihilation = EventCategorizerTools::checkForAnnihilation(
-	event, getStatistics(), fSaveControlHistos, atLeastNAnihilationHits, TOT_Cut);
+
+       	isNeighbourHits = EventCategorizerTools::removeNeighbourhits(
+       	event, getStatistics(),fSaveControlHistos, fTOTCalculationType);
+	
+	isScattered = EventCategorizerTools::checkForScatter(
+	event, getStatistics(), fSaveControlHistos, fScatterTOFTimeDiff, fTOTCalculationType);
+
+	if(!isScattered)
+	  {
+
+	    fEventAnnPrompt.totalNumber++;
+	    fEventNoAnnPrompt.totalNumber++;
+	    fEventNoPromptAnn.totalNumber++;
+            fEventNoAnnNoPrompt.totalNumber++;
+
+
+	    isPrompt = EventCategorizerTools::checkForPrompt(
+	    event, getStatistics(), fSaveControlHistos, fDeexTOTCutMin, fDeexTOTCutMax, fTOTCalculationType, atleastNprompt);
+	
+            isAnnihilation = EventCategorizerTools::checkForAnnihilation(
+            event, getStatistics(), fSaveControlHistos, atLeastNAnihilationHits, TOT_Cut);
 
 	if (isAnnihilation) { fAnnihilation.totalAccepted++;}
 	if(isPrompt){fPrompt.totalAccepted++;}
 	
-	/* Categories of events left after initial  cut */
-	
+	/* Categories of events left after initial cut and scatter test */
+		
 	if (isAnnihilation && isPrompt ){
 	  fEventAnnPrompt.totalAccepted++;
-	  case1.totalNumber++;
+	  getStatistics().fillHistogram("Hit_multiplicity_case1", event.getHits().size());
+	  for(auto hit : event.getHits()){
+          double tot1 = hit.getEnergy();
+	  getStatistics().fillHistogram("TOT_case1", tot1);
+	  }
 
-	  isScattered1 = EventCategorizerTools::checkForScatter(
-          event, getStatistics(), fSaveControlHistos, fScatterTOFTimeDiff, fTOTCalculationType);
-
-	  if (!isScattered1)
-	    {
-	      case1.totalAccepted++;
-	      
-	    }
+	  
+	  
 	}
+
+	if (isAnnihilation && !isPrompt ){
+          fEventNoPromptAnn.totalAccepted++;
+	  getStatistics().fillHistogram("Hit_multiplicity_case2", event.getHits().size());
+	  for(auto hit : event.getHits()){
+          double tot2 = hit.getEnergy();
+          getStatistics().fillHistogram("TOT_case2", tot2);
+          }
+
+
+        }
 	
         if (!isAnnihilation && isPrompt ){
 	  fEventNoAnnPrompt.totalAccepted++;
-	  case2.totalNumber++;
-	  
-	  isScattered2 = EventCategorizerTools::checkForScatter(
-          event, getStatistics(), fSaveControlHistos, fScatterTOFTimeDiff, fTOTCalculationType);
-
-	  if (!isScattered2)
-            {
-	      case2.totalAccepted++;
-
-            }
-	}
-	
-        if (isAnnihilation && !isPrompt ){
-	  fEventNoPromptAnn.totalAccepted++;
-	  case3.totalNumber++;
-	  
-	  isScattered3 = EventCategorizerTools::checkForScatter(
-          event, getStatistics(), fSaveControlHistos, fScatterTOFTimeDiff, fTOTCalculationType);
-
-	  if (!isScattered3)
-            {
-	      case3.totalAccepted++;
-
-            }
-	  
 	}
 	
         if (!isAnnihilation && !isPrompt ){
 	  fEventNoAnnNoPrompt.totalAccepted++;
-	  case4.totalNumber++;
-	  
-	  isScattered4 = EventCategorizerTools::checkForScatter(
-          event, getStatistics(), fSaveControlHistos, fScatterTOFTimeDiff, fTOTCalculationType);
+	    }
+	  }
 
-	  if (!isScattered4)
-            {
-	      case4.totalAccepted++;
-
-            }
-	}
-
-	
-	
-
-	/*
-        if(isAnnihilation){
-		 fAnnihilation.totalAccepted++;
-		 is2Gamma = EventCategorizerTools::checkFor2Gamma(
-			    event, getStatistics(), fSaveControlHistos, fB2BSlotThetaDiff, fMaxTimeDiff
-			     );
-		 is3Gamma = EventCategorizerTools::checkFor3Gamma(
-			    event, getStatistics(), fSaveControlHistos
-			    );
-		 isNeighbourHits = EventCategorizerTools::removeNeighbourhits(
-		event, getStatistics(),fSaveControlHistos, fTOTCalculationType);
-		}*/
-	
-    
       }
       
-       if(isNeighbourHits);
        
       JPetEvent newEvent = event;
       if(is2Gamma){  newEvent.addEventType(JPetEventType::k2Gamma); }
@@ -242,7 +208,7 @@ bool EventCategorizer::exec()
 	  double hit_timediff = fabs(hit_time - hit_pos/ kLightVelocity_cm_ps);
 	  int scID = hit.getScintillator().getID();
 	  double Z = hit.getPosZ();
-
+	  /*
 	  sum_tot += tot;
 	  if(is2Gamma) sum_tot_2g += tot;
 	  if(is3Gamma) sum_tot_3g += tot;	  
@@ -261,7 +227,7 @@ bool EventCategorizer::exec()
 	    getStatistics().fillHistogram("sum_TOT_ann_prompt", sum_tot_ann_prompt);
 	    getStatistics().fillHistogram("sum_TOT_3gann_prompt", sum_tot_3gann_prompt);
             getStatistics().fillHistogram("sum_TOT", sum_tot);
-
+	  */
 	    ////////
             getStatistics().fillHistogram("All_XYpos", hit.getPosX(), hit.getPosY());
             getStatistics().fillHistogram("Hit_timedifference", hit_timediff);
@@ -287,10 +253,10 @@ bool EventCategorizer::terminate()
   INFO("Efficiency of 1st cut: "+ std::to_string(TotalInitialcut.getRatio()));
   INFO("Fraction of prompt events: "+ std::to_string(fPrompt.getRatio()));
   INFO("Fraction of Annihilation events: "+ std::to_string(fAnnihilation.getRatio()));
-  INFO("Efficiency of 1st Case: "+ std::to_string(case1.getRatio()));
-  INFO("Efficiency of 2nd Case: "+ std::to_string(case2.getRatio()));
-  INFO("Efficiency of 3rd Case: "+ std::to_string(case3.getRatio()));
-  INFO("Efficiency of 4th Case: "+ std::to_string(case4.getRatio()));
+  //  INFO("Efficiency of 1st Case: "+ std::to_string(case1.getRatio()));
+  // INFO("Efficiency of 2nd Case: "+ std::to_string(case2.getRatio()));
+  // INFO("Efficiency of 3rd Case: "+ std::to_string(case3.getRatio()));
+  // INFO("Efficiency of 4th Case: "+ std::to_string(case4.getRatio()));
   INFO("Ratio of accepted events(EventNoPromptAnn): " + std::to_string(fEventNoPromptAnn.getRatio()));
   INFO("Ratio of accepted events(EventNoAnnPrompt): " + std::to_string(fEventNoAnnPrompt.getRatio()));
   INFO("Ratio of accepted events(EventAnnPrompt): " + std::to_string(fEventAnnPrompt.getRatio()));
@@ -328,7 +294,7 @@ void EventCategorizer::initialiseHistograms(){
 
   // Histograms for sum TOT
   
-  getStatistics().createHistogramWithAxes(
+  /*  getStatistics().createHistogramWithAxes(
   					  new TH1D("sum_TOT_2g","Sum of all 2gamma TOT", 200, 0, 100000),
   					  "SUM_TOT_2g(ps)","counts");
   getStatistics().createHistogramWithAxes(
@@ -352,20 +318,14 @@ void EventCategorizer::initialiseHistograms(){
   getStatistics().createHistogramWithAxes(
                                           new TH1D("sum_TOT_3gann_prompt","Sum of all 3gamma and prompt TOT", 400, 0, 200000),
                                           "SUM_TOT_3g_prompt(ps)","counts");
-
+  */
   //For mew category checkForAnnihilation
 
  getStatistics().createHistogramWithAxes(
     new TH1D("Ann_TOT_before_cut", "TOT of all hits before cut", 200, -100.0, 200000.0),
     "TOT [ps]", "Number of Hits"
   );
- getStatistics().createHistogramWithAxes(
-    new TH1D("simple_tot", "TOT of all hits after cut", 200, -100.0, 200000.0),
-    "TOT [ps]", "Number of Hits"
-   );
 
-
-  
   getStatistics().createHistogramWithAxes(
     new TH1D("Ann_TOT", "TOT of all hits after cut", 200, -100.0, 200000.0),
     "TOT [ps]", "Number of Hits"
@@ -380,12 +340,43 @@ getStatistics().createHistogramWithAxes(
 getStatistics().createHistogramWithAxes(
                                           new TH1D("Hit_multiplicity_cut2","Multiplicity of hits(2nd cut)", 10, 0.5, 10.5),
                                           "No. of hits","counts");
- getStatistics().createHistogramWithAxes(
+getStatistics().createHistogramWithAxes(
                                           new TH1D("Hit_multiplicity_ann0","Multiplicity of hits(3rd cut)", 10, 0.5, 10.5),
                                           "No. of hits","counts");
 getStatistics().createHistogramWithAxes(
                                           new TH1D("Hit_multiplicity_ann1","Multiplicity of hits(3rd cut)", 10, 0.5, 10.5),
                                           "No. of hits","counts");
+ getStatistics().createHistogramWithAxes(
+ new TH1D("Hit_multiplicity_prompt0","Multiplicity of hits before prompt cut", 10, 0.5, 10.5),
+ "No. of hits","counts"
+ );
+
+ getStatistics().createHistogramWithAxes(
+ new TH1D("Hit_multiplicity_prompt1","Multiplicity of hits after prompt cut", 10, 0.5, 10.5),
+ "No. of hits","counts"
+ );
+
+ getStatistics().createHistogramWithAxes(
+  new TH1D("Hit_multiplicity_scatt0","Multiplicity of hits(scattered)", 10, 0.5, 10.5),
+  "No. of hits","counts"
+  );
+
+ getStatistics().createHistogramWithAxes(
+  new TH1D("Hit_multiplicity_scatt1","Multiplicity of hits(scattered)", 10, 0.5, 10.5),
+  "No. of hits","counts"
+  );
+
+ getStatistics().createHistogramWithAxes(
+  new TH1D("Hit_multiplicity_case1","Multiplicity of hits(ann&prompt)", 10, 0.5, 10.5),
+  "No. of hits","counts"
+  );
+
+ getStatistics().createHistogramWithAxes(
+  new TH1D("Hit_multiplicity_case2","Multiplicity of hits(ann&_no_prompt)", 10, 0.5, 10.5),
+  "No. of hits","counts"
+  );
+
+ 
   
  
 
@@ -465,238 +456,196 @@ getStatistics().createHistogramWithAxes(
 
   // Histograms for 3Gamama category
   getStatistics().createHistogramWithAxes(
-    new TH2D("3Gamma_Angles", "Relative angles - transformed", 250, -0.5, 249.5, 20, -0.5, 199.5),
-    "Relative angle 1-2", "Relative angle 2-3"
+  new TH2D("3Gamma_Angles", "Relative angles - transformed", 250, -0.5, 249.5, 20, -0.5, 199.5),
+  "Relative angle 1-2", "Relative angle 2-3"
   );
 
   getStatistics().createHistogramWithAxes(
-                                          new TH1D("Hit_multiplicity_3g","Multiplicity of hits", 10, 0.5, 10.5),
-                                          "No. of hits","counts");
+  new TH1D("Hit_multiplicity_3g","Multiplicity of hits", 10, 0.5, 10.5),
+  "No. of hits","counts"
+  );
 
 
   // Histograms for scattering category
-  getStatistics().createHistogramWithAxes(
-    new TH2D("ScatterAngle_PrimaryTOT_before", "Angle of scattering vs. TOT of primary hits_before_cut",
-    200, -0.5, 199.5, 200, -100.0, 39900.0),
-    "Scattering Angle", "TOT of primary hit [ps]"
+  getStatistics().createHistogramWithAxes( 
+  new TH2D("ScatterAngle_PrimaryTOT_before", "Angle of scattering vs. TOT of primary hits_before_cut",200, -0.5, 199.5, 200, -100.0, 39900.0),
+  "Scattering Angle", "TOT of primary hit [ps]"
   );
 
   getStatistics().createHistogramWithAxes(
-    new TH2D("ScatterAngle_ScatterTOT_before", "Angle of scattering vs. TOT of scattered hits_before_cut",
-    200, -0.5, 199.5, 200, -100.0, 39900.0),
-    "Scattering Angle", "TOT of scattered hit [ps]"
+  new TH2D("ScatterAngle_ScatterTOT_before", "Angle of scattering vs. TOT of scattered hits_before_cut",200, -0.5, 199.5, 200, -100.0, 39900.0),
+  "Scattering Angle", "TOT of scattered hit [ps]"
   );
-
-
   
   getStatistics().createHistogramWithAxes(
-    new TH1D("ScatterTOF_TimeDiff", "Difference of Scatter TOF and hits time difference",
-    3.0*fScatterTOFTimeDiff, -0.5, 3.0*fScatterTOFTimeDiff-0.5),
-    "Scat_TOF - time diff [ps]", "Number of Hit Pairs"
+  new TH1D("ScatterTOF_TimeDiff", "Difference of Scatter TOF and hits time difference", 25, -0.5, 3.0*fScatterTOFTimeDiff-0.5),
+  "Scat_TOF - time diff [ps]", "Number of Hit Pairs"
   );
 
   getStatistics().createHistogramWithAxes(
-    new TH2D("ScatterAngle_PrimaryTOT", "Angle of scattering vs. TOT of primary hits",
-    200, -0.5, 199.5, 200, -100.0, 39900.0),
-    "Scattering Angle", "TOT of primary hit [ps]"
+  new TH2D("ScatterAngle_PrimaryTOT", "Angle of scattering vs. TOT of primary hits",200, -0.5, 199.5, 200, -100.0, 39900.0),
+  "Scattering Angle", "TOT of primary hit [ps]"
   );
 
   getStatistics().createHistogramWithAxes(
-    new TH2D("ScatterAngle_ScatterTOT", "Angle of scattering vs. TOT of scattered hits",
-    200, -0.5, 199.5, 200, -100.0, 39900.0),
-    "Scattering Angle", "TOT of scattered hit [ps]"
+  new TH2D("ScatterAngle_ScatterTOT", "Angle of scattering vs. TOT of scattered hits",200, -0.5, 199.5, 200, -100.0, 39900.0),
+  "Scattering Angle", "TOT of scattered hit [ps]"
   );
 
   // Histograms for deexcitation
   //New
   getStatistics().createHistogramWithAxes(
-    new TH1D("SYNC_TOT", "TOT of all hits at event level", 200, -100.0, 200000.0),
-    "TOT [ps]", "Number of Hits"
+  new TH1D("SYNC_TOT", "TOT of all hits at event level", 200, -100.0, 200000.0),
+  "TOT [ps]", "Number of Hits"
   );
   ///
   getStatistics().createHistogramWithAxes(
-    new TH1D("Deex_TOT_cut", "TOT of all hits with deex cut", 200, 85000.0, 140000.0),
-    "TOT [ps]", "Number of Hits"
+  new TH1D("Deex_TOT_cut", "TOT of all hits with deex cut", 200, 85000.0, 140000.0),
+  "TOT [ps]", "Number of Hits"
   );
-
-  getStatistics().createHistogramWithAxes(
-                                          new TH1D("Hit_multiplicity_prompt","Multiplicity of hits", 10, 0.5, 10.5),
-                                          "No. of hits","counts");
 
 
   // Histogram for time differences between hit time and calculated hit time
-  getStatistics().createHistogramWithAxes(
-    new TH1D("Hit_timedifference", "Time difference of hit", 10000, -100.0, 21000000.0),
-    "Time Difference [ps]", "counts"
-  );
+ getStatistics().createHistogramWithAxes(
+ new TH1D("Hit_timedifference", "Time difference of hit", 10000, -100.0, 21000000.0),
+ "Time Difference [ps]", "counts"
+ );
 
   //histogram for openingangles and scintillator corellation
-  getStatistics().createHistogramWithAxes(
-    new TH1D("Opening_angle_before", "opening angles between 2 hits before cut", 180, 0, 180),
-    "Angle", "Number of Hit"
-  );
+ getStatistics().createHistogramWithAxes(
+ new TH1D("Opening_angle_before", "opening angles between 2 hits before cut", 180, 0, 180),
+ "Angle", "Number of Hit"
+ );
 
  getStatistics().createHistogramWithAxes(
-    new TH1D("Scintillator_before", "Difference in Scintillator ID before cut", 200, 0, 200),
-    "Difference", "number of hits"
-  );
-
-getStatistics().createHistogramWithAxes(
-    new TH1D("Opening_angle", "opening angles between 2 hits", 180, 0, 360),
-    "Angle", "Number of Hit"
-  );
+ new TH1D("Scintillator_before", "Difference in Scintillator ID before cut", 200, 0, 200),
+ "Difference", "number of hits"
+ );
 
  getStatistics().createHistogramWithAxes(
-    new TH1D("Scintillator", "Difference in Scintillator ID", 200, 0, 200),
-    "Difference", "number of hits"
-  );
+ new TH1D("Opening_angle", "opening angles between 2 hits", 180, 0, 360),
+ "Angle", "Number of Hit"
+ );
+
+ getStatistics().createHistogramWithAxes(
+ new TH1D("Scintillator", "Difference in Scintillator ID", 200, 0, 200),
+ "Difference", "number of hits"
+ );
 
 
  getStatistics().createHistogramWithAxes(
-    new TH2D("opening_angle_Vs_distance_before", "Opening Angle of hits vs. Distance between hits",
-    360, 0, 360, 200, 0, 200),
-    "Opening Angle", "Distance [cm]"
-   );
+ new TH2D("opening_angle_Vs_distance_before", "Opening Angle of hits vs. Distance between hits", 360, 0, 360, 200, 0, 200),
+ "Opening Angle", "Distance [cm]"
+ );
    
  getStatistics().createHistogramWithAxes(
-    new TH2D("opening_angle_Vs_distance", "Opening Angle of hits vs. Distance between hits",
-    360, 0, 360, 200, 0, 200),
-    "Opening angle", "Distance [cm]"
-  );
+ new TH2D("opening_angle_Vs_distance", "Opening Angle of hits vs. Distance between hits",360, 0, 360, 200, 0, 200),
+ "Opening angle", "Distance [cm]"
+ );
 
  getStatistics().createHistogramWithAxes(
-    new TH2D("opening_angle_Vs_z_before", "Opening Angle of hits vs. z",
-    200, 0, 200, 160,-80, 80),
-    "Opening angle", "Difference in z"
-  );
+ new TH2D("opening_angle_Vs_z_before", "Opening Angle of hits vs. z",200, 0, 200, 160,-80, 80),
+ "Opening angle", "Difference in z"
+ );
 
  getStatistics().createHistogramWithAxes(
-    new TH2D("opening_angle_Vs_z", "Opening Angle of hits vs. z",
-    200, 0, 200, 160, -80, 80),
-    "Opening angle", "Difference in z"
-  );
+ new TH2D("opening_angle_Vs_z", "Opening Angle of hits vs. z",200, 0, 200, 160, -80, 80),
+ "Opening angle", "Difference in z"
+ );
 
+ getStatistics().createHistogramWithAxes(
+ new TH1D("delta_time_before", "Difference in time between 2 hits before cut",500, 0, 30000),
+ "#Delta_t[ps]", "counts"
+ );
+
+ getStatistics().createHistogramWithAxes(
+ new TH1D("delta_time", "Difference in time between 2 hits after cut",500, 0, 30000),
+ "#Delta_t[ps]", "counts"
+ );
+
+ getStatistics().createHistogramWithAxes(
+ new TH2D("opening_angle_Vs_scinID1", "Opening Angle of hits vs. scinID1",180, 0, 180, 200, 0, 200),
+ "Opening angle", "scinID1"
+ );
  
  getStatistics().createHistogramWithAxes(
-					 new TH1D("delta_time_before", "Difference in time between 2 hits before cut",500, 0, 30000),
-    "#Delta_t[ps]", "counts"
-  );
+ new TH2D("opening_angle_Vs_scinID2", "Opening Angle of hits vs. scinID2",
+ 180, 0, 180, 200, 0, 200),
+ "Opening angle", "scinID1"
+ );
 
  getStatistics().createHistogramWithAxes(
-					 new TH1D("delta_time", "Difference in time between 2 hits after cut",500, 0, 30000),
-    "#Delta_t[ps]", "counts"
-  );
-
-  getStatistics().createHistogramWithAxes(
-    new TH2D("opening_angle_Vs_scinID1", "Opening Angle of hits vs. scinID1",
-    180, 0, 180, 200, 0, 200),
-    "Opening angle", "scinID1"
-  );
- getStatistics().createHistogramWithAxes(
-    new TH2D("opening_angle_Vs_scinID2", "Opening Angle of hits vs. scinID2",
-    180, 0, 180, 200, 0, 200),
-    "Opening angle", "scinID1"
-  );
-
- getStatistics().createHistogramWithAxes(
-    new TH1D("Hit_multiplicity_n2","Multiplicity of hits(2 hITS)", 10, 0.5, 10.5),
-    "No. of hits","counts"
-  );
+ new TH1D("Hit_multiplicity_n2","Multiplicity of hits(2 hITS)", 10, 0.5, 10.5),
+ "No. of hits","counts"
+ );
  
  getStatistics().createHistogramWithAxes(
-   new TH1D("Hit_multiplicity_n3","Multiplicity of hits(3 HITS)", 10, 0.5, 10.5),
-  "No. of hits","counts"
-   );
+ new TH1D("Hit_multiplicity_n3","Multiplicity of hits(3 HITS)", 10, 0.5, 10.5),
+ "No. of hits","counts"
+ );
 
  getStatistics().createHistogramWithAxes(
-    new TH1D("Hit_multiplicity_n5","Multiplicity of hits(5 HITS)", 10, 0.5, 10.5),
-    "No. of hits","counts"
-  );
-
-
- getStatistics().createHistogramWithAxes(
-   new TH3D("scID Distribution", "Angular distribution of scID",
-   200, 0, 200, 200, 0, 200, 180, 0, 180), "scID1","scID2","opening angles"
-   );
+ new TH1D("Hit_multiplicity_n5","Multiplicity of hits(5 HITS)", 10, 0.5, 10.5),
+ "No. of hits","counts"
+ );
 
   getStatistics().createHistogramWithAxes(
-    new TH2D("scinID1_Vs_scinID2", "scinID1 vs. scinID2",
-    200, 0, 200, 200, 0, 200),
-    "scinID1", "scinID2"
+  new TH3D("scID Distribution", "Angular distribution of scID",  200, 0, 200, 200, 0, 200, 180, 0, 180),
+  "scID1","scID2","opening angles"
   );
 
   getStatistics().createHistogramWithAxes(
-   new TH3D("scID Distribution_after", "Angular distribution of scID",
-   200, 0, 200, 200, 0, 200, 180, 0, 180), "scID1","scID2","opening angles"
-   );
-
-  getStatistics().createHistogramWithAxes(
-    new TH2D("distance_vs_time_diff_before", "distance_vs_time_diff",
-	     150, 0, 150, 500, 0, 5000),"Distance[cm]","#Delta_t[ps]"
+  new TH2D("scinID1_Vs_scinID2", "scinID1 vs. scinID2",200, 0, 200, 200, 0, 200),
+  "scinID1", "scinID2"
   );
 
   getStatistics().createHistogramWithAxes(
-    new TH2D("distance_vs_time_diff_before2(dis)", "distance_vs_time_diff",
-             150, 0, 150,500, 0, 10000),
-    "Distance[cm]", "#Delta_t[ps]"
+  new TH3D("scID Distribution_after", "Angular distribution of scID",200, 0, 200, 200, 0, 200, 180, 0, 180),
+  "scID1","scID2","opening angles"
   );
 
   getStatistics().createHistogramWithAxes(
-    new TH2D("distance_vs_time_diff_before3(dt)", "distance_vs_time_diff",
-             150, 0, 150,500, 0, 5000),
-    "Distance[cm]", "#Delta_t[ps]"
+  new TH2D("distance_vs_time_diff_before", "distance_vs_time_diff",150, 0, 150, 500, 0, 5000),
+  "Distance[cm]","#Delta_t[ps]"
   );
 
   getStatistics().createHistogramWithAxes(
-    new TH2D("distance_vs_time_diff", "distance_vs_time_diff",
-             150, 0, 150,500, 0, 5000),
-    "Distance[cm]", "#Delta_t[ps]"
+  new TH2D("distance_vs_time_diff_before2(dis)", "distance_vs_time_diff", 150, 0, 150,500, 0, 10000),
+  "Distance[cm]", "#Delta_t[ps]"
+  );
+
+  getStatistics().createHistogramWithAxes(
+  new TH2D("distance_vs_time_diff_before3(dt)", "distance_vs_time_diff", 150, 0, 150,500, 0, 5000),
+  "Distance[cm]", "#Delta_t[ps]"
+  );
+
+  getStatistics().createHistogramWithAxes(
+  new TH2D("distance_vs_time_diff", "distance_vs_time_diff",150, 0, 150,500, 0, 5000),
+  "Distance[cm]", "#Delta_t[ps]"
   );
 
   
   getStatistics().createHistogramWithAxes(
-    new TH2D("sum_diff_angle_dist", "sum and difference of 2 smallest relative angles",
-             250, 0, 250, 200, 0, 200),
-   "#theta_{1}+#theta_{2}[degree]" , "#theta_{1}-#theta_{2}[degree]"
-  );
-
-
-  getStatistics().createHistogramWithAxes(
-    new TH2D("xyz1", "distance_vs_time_diff(pair12)",
-             150, 0, 150,250, 0, 2000000),
-    "Distance[cm]","#Delta_t[ps]"
-  );
-    
-getStatistics().createHistogramWithAxes(
-    new TH2D("xyz2", "distance_vs_time_diff(pair13)",
-             150, 0, 150,250, 0, 2000000),
-    "Distance[cm]","#Delta_t[ps]"
-  );
-
- getStatistics().createHistogramWithAxes(
-    new TH2D("xyz3", "distance_vs_time_diff(pair23)",
-             150,0,150,250, 0, 2000000),
-    "Distance[cm]","#Delta_t[ps]"
+  new TH2D("sum_diff_angle_dist", "sum and difference of 2 smallest relative angles", 250, 0, 250, 200, 0, 200),
+  "#theta_{1}+#theta_{2}[degree]" , "#theta_{1}-#theta_{2}[degree]"
   );
 
   getStatistics().createHistogramWithAxes(
-   new TH1D("t1","t1", 250, 0, 5000000),
+  new TH2D("dist_vs_M_3h", "distance_vs_time_diff", 150, 0, 150,25, -0.5, 3.0*fScatterTOFTimeDiff-0.5),
+  "Distance[cm]","#Delta_t[ps]"
+  );
+  
+   getStatistics().createHistogramWithAxes(
+   new TH1D("time_difference_3hits","t1", 25, -0.5, 4.0*fScatterTOFTimeDiff-0.5),
   "#Delta_t(12)[ps]","counts"
    );
-     getStatistics().createHistogramWithAxes(
-   new TH1D("t2","t2", 250, 0, 5000000),
-  "Delta_t(13)[ps]","counts"
-   );
-     getStatistics().createHistogramWithAxes(
-   new TH1D("t3","t3", 250, 0, 5000000),
-  "Delta_t(23)[ps]","counts"
-   );
+ 
 
      /*     getStatistics().createHistogramWithAxes(
    new TH2D("xy","scatter_test", 250, 0, 1700000,250, 0, 1700000),"1","2"
    );*/
 
-     
+     /*   
      getStatistics().createHistogramWithAxes(
     new TH1D("hit_order1","time(t3-t2)", 100, 0, 15000),
     "#deltat_between_hits","counts" );
@@ -708,32 +657,85 @@ getStatistics().createHistogramWithAxes(
 getStatistics().createHistogramWithAxes(
    new TH1D("hit_order3","time(t3-t1)", 100, 0, 15000),
   "#deltat_between_hits[cm]","counts"
-   );
+   );*/
 
  getStatistics().createHistogramWithAxes(
-   new TH1D("time_difference","dt", 250, 0, 1500000),
-  "#dt(12)[ps]","counts"
-   );
+ new TH1D("time_difference_2hits","dt", 26, -0.5, 4.0*fScatterTOFTimeDiff-0.5),
+ "#dt(12)[ps]","counts"
+ );
 
  getStatistics().createHistogramWithAxes(
-   new TH1D("distance","distance", 150, 0,150),
-  "distance[cm]","counts"
-   );
+ new TH1D("distance","distance", 150, 0,150),
+ "distance[cm]","counts"
+ );
+
+ getStatistics().createHistogramWithAxes(
+ new TH2D("D_vs_dt", "distance_vs_dt(5hits)", 150, 0, 150, 26, -0.5, 3.0*fScatterTOFTimeDiff-0.5),
+"Distance[cm]","#Delta_t[ps]"
+ );
+
+ getStatistics().createHistogramWithAxes(
+ new TH2D("dt_vs_dt", "dt_vs_dt", 250, 0, 5000000,250, 0, 1500000),
+"#Delta_t[ps]","#Delta_t[ps]"
+ );
+ 
+ getStatistics().createHistogramWithAxes(
+ new TH1D("3hit_tot", "TOT for 3 hits", 200, -100, 200000),
+ "TOT[ps]", "counts"
+ );
+ 
+ getStatistics().createHistogramWithAxes(
+ new TH1D("5hit_tot", "TOT for 5 hits", 200, -100, 200000),
+ "TOT[ps]", "counts"
+ );
+ 
+ getStatistics().createHistogramWithAxes(
+ new TH1D("dt_5_hits", "Time _diff_for 5 hits",26, -0.5, 4.0*fScatterTOFTimeDiff-0.5),
+ "Time_diff[ps]", "counts"
+ );
+
+ getStatistics().createHistogramWithAxes(
+ new TH2D("Scatt_Dist_vs_M_before", "Scatt_Dist_vs_M_before", 150, 0, 150, 26, -0.5, 3.0*fScatterTOFTimeDiff-0.5),
+ "Distance[cm]","#Delta_t[ps]"
+ );
+ 
+ getStatistics().createHistogramWithAxes(
+ new TH2D("Scatt_Dist_vs_M", "Scatt_Dist_vs_M_before", 150, 0, 150, 26, -0.5, 3.0*fScatterTOFTimeDiff-0.5),
+ "Distance[cm]","#Delta_t[ps]"
+ );
+ 
+ getStatistics().createHistogramWithAxes(
+ new TH1D("Scatt_time_diff_before","dt", 26, -0.5, 3.0*fScatterTOFTimeDiff-0.5),
+ "#dt(12)[ps]","counts"
+ );
+ 
+ getStatistics().createHistogramWithAxes(
+ new TH1D("Scatt_time_diff","dt", 26, -0.5, 3.0*fScatterTOFTimeDiff-0.5),
+ "#dt(12)[ps]","counts"
+ );
+
+ getStatistics().createHistogramWithAxes(
+ new TH1D("Hit_Z_POS_before","Hit position Z ", 80, -40, 40),
+ "Z_Hit_Pos[cm]","counts"
+ );
+
+ getStatistics().createHistogramWithAxes(
+ new TH1D("Hit_Z_POS","Hit position Z ", 80, -40, 40),
+ "Z_Hit_Pos[cm]","counts"
+ );
+
+ getStatistics().createHistogramWithAxes(
+ new TH1D("TOT_case1", "TOT for anni&prompt hits", 200, -100, 200000),
+ "TOT[ps]", "counts"
+ );
+
+ getStatistics().createHistogramWithAxes(
+ new TH1D("TOT_case2", "TOT for anni&no_prompt hits", 200, -100, 200000),
+ "TOT[ps]", "counts"
+ );
+
+ 
 
 
- //y for(auto i = 1; i<=10; i++)
-   {
-     getStatistics().createHistogramWithAxes(
-	new TH2D("D_vs_dt", "distance_vs_dt", 150, 0, 150,250, 0, 1500000),
-        "Distance[cm]","#Delta_t[ps]");
-
-     getStatistics().createHistogramWithAxes(
-        new TH2D("dt_vs_dt", "dt_vs_dt", 250, 0, 5000000,250, 0, 5000000),
-        "#Delta_t[ps]","#Delta_t[ps]");
-
-   }
- getStatistics().createHistogramWithAxes(new TH1D("3hit_tot", "TOT for 3 hits", 200, -100, 200000), "TOT[ps]", "counts");
- getStatistics().createHistogramWithAxes(new TH1D("5hit_tot", "TOT for 5 hits", 200, -100, 200000), "TOT[ps]", "counts");
- getStatistics().createHistogramWithAxes(new TH1D("efficiency",  "TOT efficiency",  200, -100.0, 200000.0), "TOT[ps]", "Efficiency");
 	    
 }

@@ -18,7 +18,6 @@
 #include <TMath.h>
 #include <vector>
 #include <tuple>
-#include "TEfficiency.h"
 #include <iostream>
 #include <TFile.h>
 
@@ -136,7 +135,7 @@ bool EventCategorizerTools::checkForPrompt(
   double deexTOTCutMin, double deexTOTCutMax, std::string fTOTCalculationType, int atleastNprompt)
 {
   int NumberOfPrompts = 0;
-  // stats.fillHistogram("Hit_multiplicity_prompt", event.getHits().size());
+  stats.fillHistogram("Hit_multiplicity_prompt0", event.getHits().size());
   double tot = 0.0;
 
   if (event.getHits().size() < atleastNprompt)
@@ -149,10 +148,11 @@ bool EventCategorizerTools::checkForPrompt(
     tot = event.getHits().at(i).getEnergy();
     stats.fillHistogram("SYNC_TOT", tot);
     
-    if (tot > deexTOTCutMin && tot < deexTOTCutMax){
+    if (tot > deexTOTCutMin && tot < deexTOTCutMax)
+      {
       NumberOfPrompts++;
       stats.fillHistogram("Deex_TOT_cut", tot);
-    }
+      }
     
     if (NumberOfPrompts >= atleastNprompt)
       {	
@@ -160,7 +160,7 @@ bool EventCategorizerTools::checkForPrompt(
       }
   }
   
-  stats.fillHistogram("Hit_multiplicity_prompt", event.getHits().size());
+  stats.fillHistogram("Hit_multiplicity_prompt1", event.getHits().size());
     return false;
 }
 
@@ -174,7 +174,7 @@ const JPetEvent& event, JPetStatistics& stats, bool saveHistos, int atLeastNAnih
   double tot = 0.0;
   double tota = 0.0;
   
-  // stats.fillHistogram("Hit_multiplicity_ann0", event.getHits().size());
+  stats.fillHistogram("Hit_multiplicity_ann0", event.getHits().size());
   if (event.getHits().size() < atLeastNAnihilationHits)
     {
       return false;
@@ -189,7 +189,7 @@ const JPetEvent& event, JPetStatistics& stats, bool saveHistos, int atLeastNAnih
 	   numberOfAnnihilation++;
 	 }
        tota = event.getHits().at(i).getEnergy();
-       stats.fillHistogram("Hit_multiplicity_ann0", event.getHits().size());
+       //     stats.fillHistogram("Hit_multiplicity_ann0", event.getHits().size());
       
        if (numberOfAnnihilation>=atLeastNAnihilationHits)
 	 {
@@ -214,24 +214,27 @@ const JPetEvent& event, JPetStatistics& stats, bool saveHistos, Counter& hitCoun
     {
       hitCounter.totalNumber++;
       return false;
-    }                                                                                                                                                                                                   
+    }
+  
   stats.fillHistogram("Hit_multiplicity_cut1", event.getHits().size()); 
   bool isZLessThan23 = true;
   for (auto i = 0; i < event.getHits().size(); i++) {
     hitCounter.totalNumber++;
+    stats.fillHistogram("Hit_Z_POS_before", event.getHits().at(i).getPosZ());
     if (fabs( event.getHits().at(i).getPosZ()) > 23)
       {
 	isZLessThan23 = false;
       }
     else{
       hitCounter.totalAccepted++;
+      stats.fillHistogram("Hit_Z_POS", event.getHits().at(i).getPosZ());
     }
   }
   if (!isZLessThan23)	
     {
       return false;
     }
-
+  
   stats.fillHistogram("Hit_multiplicity_cut2", event.getHits().size());
   return true;
 }
@@ -244,7 +247,9 @@ bool EventCategorizerTools::removeNeighbourhits(
   const JPetEvent& event, JPetStatistics& stats, bool saveHistos,
   std::string fTOTCalculationType)
 {
+  
   vector<JPetHit> hits = event.getHits();
+  // stats.fillHistogram("Hit_multiplicity_n2", event.getHits().size());
  if (event.getHits().size() == 2)
    {
      
@@ -280,7 +285,7 @@ bool EventCategorizerTools::removeNeighbourhits(
             stats.fillHistogram("distance_vs_time_diff_before", distance, del_time);
 	    stats.fillHistogram("distance_vs_time_diff_before2(dis)", distance, del_time2);
 	    stats.fillHistogram("distance_vs_time_diff_before3(dt)", distance, dt);
-	    stats.fillHistogram("time_difference", dt);
+	    stats.fillHistogram("time_difference_2hits", del_time);
 	    stats.fillHistogram("distance", distance);
           }
 
@@ -337,34 +342,33 @@ bool EventCategorizerTools::removeNeighbourhits(
 	     dt.push_back(fabs((d/kLightVelocity_cm_ps) -t));
 	   }
        }
+     
      for (auto i =0; i < 3; i++)
-       {
+       { 
 	 tot3 = hits[i].getEnergy();
+	 stats.fillHistogram("time_difference_3hits",dt.at(i));
+	 stats.fillHistogram("dist_vs_M_3h",dist.at(i),dt.at(i));
+	 stats.fillHistogram("3hit_tot",tot3);
+	 
        }
-
+    
      if (saveHistos)
        {
-	 stats.fillHistogram("hit_order1", t3-t2);
+	 /* stats.fillHistogram("hit_order1", t3-t2);
 	 stats.fillHistogram("hit_order2", t2-t1);
-	 stats.fillHistogram("hit_order3", t3-t1);
+	 stats.fillHistogram("hit_order3", t3-t1);*/
 	 stats.fillHistogram("sum_diff_angle_dist", theta_sum,theta_diff);
-	 stats.fillHistogram("xyz1",dist.at(0),dt.at(0));
-	 stats.fillHistogram("xyz2",dist.at(1),dt.at(1));
-	 stats.fillHistogram("xyz3",dist.at(2),dt.at(2));
-	 stats.fillHistogram("t1",dt.at(0));
-	 stats.fillHistogram("t2",dt.at(1));
-	 stats.fillHistogram("t3",dt.at(2));
-	 stats.fillHistogram("3hit_tot",tot3);
-	 //	 stats.fillHistogram("xy",dt.at(0),dt.at(2));
+	 //	 stats.fillHistogram("5hit_tot",tot3);
+	 // stats.fillHistogram("xy",dt.at(0),dt.at(2));
 
        }
-     // Hit_Eff->Fill(true,2);
      return true;
      
    }
      
  if (event.getHits().size()==5)
     {
+      
       vector<TVector3> pos;
       vector<double> time;
       vector<double> dist;
@@ -372,7 +376,7 @@ bool EventCategorizerTools::removeNeighbourhits(
       double tot5 = 0.0;
       stats.fillHistogram("Hit_multiplicity_n5", event.getHits().size());
       
-      for(auto i = 0; i< 5; i++)
+      for(auto i = 0; i< 6; i++)
         {
           pos.push_back(hits[i].getPos());
           time.push_back(hits[i].getTime());
@@ -384,102 +388,36 @@ bool EventCategorizerTools::removeNeighbourhits(
             {
               double d =fabs((hits[i].getPos()-hits[j].getPos()).Mag());
               double t =fabs(hits[i].getTime()-hits[j].getTime());
-             dist.push_back(d);
+              dist.push_back(d);
               dt.push_back(fabs((d/kLightVelocity_cm_ps) -t));
             }
         }
 
-      for (auto i =0; i < 3; i++)
+      for (auto i =0; i < 5; i++)
        {
          tot5 = hits[i].getEnergy();
+	 // stats.fillHistogram("5hit_tot", tot5 );
        }
 
       if (saveHistos)
 	{
+	  // stats.fillHistogram("Hit_multiplicity_n5", event.getHits().size());
             for(auto k =1; k<=10; k++)
               {
 		// stats.fillHistogram(Form("D_vs_t%d", k), dist[k-1],dt[k-1]);
 		//	stats.fillHistogram(Form("dt_vs_dt%d", k), dt[k-1],dt[k]);
-		stats.fillHistogram("5hit_tot", tot5 );
+		//		stats.fillHistogram("5hit_tot", tot5 );
 		stats.fillHistogram("D_vs_dt", dist[k-1], dt[k-1]);
 		stats.fillHistogram("dt_vs_dt", dt[k-1],dt[k]);
+		stats.fillHistogram("dt_5_hits", dt[k-1]);
 		  
               }
           }
       return true;
-    }
+    }     
  return true;
+        
 }
-
-/*
-std::pair<int, bool> EventCategorizerTools::checkFor5gamma(
-const JPetEvent& event, JPetStatistics& stats, bool saveHistos)
-
-{
-  if (event.getHits().size() < 3)
-    {
-      return std::make_pair(false, n);
-    }
-
-  n = event.getHits().size();
-  int c = (n*(n-1))/2;
-
-  
-  for(auto i = 0; i<event.getHits().size(); i++)
-    {
-      auto tot = event.getHits().at(i).getEnergy();
-      if (tot > 65000)
-	{
-	  return std::make_pair(false, n);
-	}
-    }
-  
-  vector<JPetHit> hits = event.getHits();
-  
-  for(auto i = 0; i< event.getHits().size(); i++)
-    {
-     if (fabs(hits[i].getPosZ()) > 23)
-       {
-         return std::make_pair(false, c);
-       }
-    }
-  
-  if (event.getHits().size()==5)
-    {
-      vector<TVector3> pos;
-      vector<double> time;
-      vector<double> dist;
-      vector<double> dt;
-      for(auto i = 0; i< event.getHits().size(); i++)
-	{
-	  pos.push_back(hits[i].getPos());
-	  time.push_back(hits[i].getTime());
-	}
-      
-
-      for(auto i = 0; i<event.getHits().size(); i++)
-	{
-	  for(auto j = i+1; j<event.getHits().size(); j++)
-	    {
-	      double d =fabs((hits[i].getPos()-hits[j].getPos()).Mag());
-	      double t =fabs(hits[i].getTime()-hits[j].getTime());
-             dist.push_back(d);
-              dt.push_back(fabs((d/kLightVelocity_cm_ps) -t));
-	    }
-	}
-      
-      if (saveHistos)
-	  {
-	    for(auto k =1; k<=10; k++)
-	      {
-		stats.fillHistogram(Form("D_vs_t%d", k), dist[k-1],dt[k-1]);
-	      }
-	  }
-      return std::make_pair(true, n);
-    }
-
-}
-*/
 
 /**
 * Method for determining type of event - scatter
@@ -487,7 +425,8 @@ const JPetEvent& event, JPetStatistics& stats, bool saveHistos)
 bool EventCategorizerTools::checkForScatter(
   const JPetEvent& event, JPetStatistics& stats, bool saveHistos, double scatterTOFTimeDiff, 
   std::string fTOTCalculationType)
-{  
+{
+  stats.fillHistogram("Hit_multiplicity_scatt0", event.getHits().size()); // no cuts
   for (auto i = 0; i < event.getHits().size(); i++) {
     for (auto j = i + 1; j < event.getHits().size(); j++) {
      JPetHit primaryHit, scatterHit;
@@ -503,11 +442,12 @@ bool EventCategorizerTools::checkForScatter(
         {
           return true;
         }
-
-
+      
       double scattAngle = calculateScatteringAngle(primaryHit, scatterHit);
       double scattTOF = calculateScatteringTime(primaryHit, scatterHit);
       double timeDiff = scatterHit.getTime() - primaryHit.getTime();
+      double dist = calculateDistance(primaryHit,scatterHit);
+      double M = fabs(scattTOF - timeDiff);
 
  
 
@@ -515,21 +455,23 @@ bool EventCategorizerTools::checkForScatter(
         stats.fillHistogram("ScatterTOF_TimeDiff", fabs(scattTOF - timeDiff));
 	stats.fillHistogram("ScatterAngle_PrimaryTOT_before", scattAngle, primaryHit.getEnergy());
 	stats.fillHistogram("ScatterAngle_ScatterTOT_before", scattAngle, scatterHit.getEnergy());
+	stats.fillHistogram("Scatt_Dist_vs_M_before", dist,M);
+	stats.fillHistogram("Scatt_time_diff_before",M);
 
       }
 
       if (fabs(scattTOF - timeDiff) < scatterTOFTimeDiff) {
         if (saveHistos) {
-          stats.fillHistogram("ScatterAngle_PrimaryTOT", scattAngle, HitFinderTools::calculateTOT(primaryHit, 
-                                                        HitFinderTools::getTOTCalculationType(fTOTCalculationType)));
-          stats.fillHistogram("ScatterAngle_ScatterTOT", scattAngle, HitFinderTools::calculateTOT(scatterHit, 
-                                                        HitFinderTools::getTOTCalculationType(fTOTCalculationType)));
-	 
+          stats.fillHistogram("ScatterAngle_PrimaryTOT", scattAngle, primaryHit.getEnergy());
+          stats.fillHistogram("ScatterAngle_ScatterTOT", scattAngle, scatterHit.getEnergy());
+	  stats.fillHistogram("Scatt_Dist_vs_M", dist,M);
+	  stats.fillHistogram("Scatt_time_diff",M);
 	}
         return true;
       }
     }
   }
+  stats.fillHistogram("Hit_multiplicity_scatt1", event.getHits().size());
   return false;
 }
 
