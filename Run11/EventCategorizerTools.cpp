@@ -310,7 +310,7 @@ bool EventCategorizerTools::removeNeighbourhits(
  else if (event.getHits().size() == 3)
    {
      stats.fillHistogram("Hit_multiplicity_n3", event.getHits().size());
-     
+      stats.fillHistogram("lifetime",abs( hits[0].getTime() - hits[2].getTime()));
      TVector3 v1 =  hits[0].getPos();
      TVector3 v2 =  hits[1].getPos();
      TVector3 v3 =  hits[2].getPos();
@@ -402,6 +402,8 @@ bool EventCategorizerTools::removeNeighbourhits(
       if (saveHistos)
 	{
 	  // stats.fillHistogram("Hit_multiplicity_n5", event.getHits().size());
+	
+	
             for(auto k =1; k<=10; k++)
               {
 		// stats.fillHistogram(Form("D_vs_t%d", k), dist[k-1],dt[k-1]);
@@ -414,7 +416,12 @@ bool EventCategorizerTools::removeNeighbourhits(
               }
           }
       return true;
-    }     
+    }
+/*if (event.getHits().size() == 6)
+{
+	stats.fillHistogram("lifetime", hits[0].getTime() - hits[5].getTime());
+	
+}*/	
  return true;
         
 }

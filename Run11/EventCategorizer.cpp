@@ -173,8 +173,32 @@ bool EventCategorizer::exec()
 	if (isAnnihilation && !isPrompt ){
           fEventNoPromptAnn.totalAccepted++;
 	  getStatistics().fillHistogram("Hit_multiplicity_case2", event.getHits().size());
+
+	  int numberOfThreshold = 10;
+	  double TOT[numberOfThreshold] = {10000,15000,20000,25000,35000,40000, 45000,50000,55000,60000};
+	  int hitCount = 0;
+	  
+	  for(int i = 0; i < numberOfThreshold; i++)
+	  {
+		  hitCount = 0;
+		  double thrTOT = TOT[i];
+		  for(auto hit : event.getHits())
+		  {
+			  if(hit.getEnergy() > thrTOT) 
+			  {
+				  hitCount++;
+			  }
+		  }
+		  if (hitCount >= 4)
+		  {
+                      getStatistics().fillHistogram(Form("Hit_Multi%d", i), event.getHits().size());
+		  }
+	  }
+
+
 	  for(auto hit : event.getHits()){
           double tot2 = hit.getEnergy();
+
           getStatistics().fillHistogram("TOT_case2", tot2);
           }
 
@@ -281,6 +305,9 @@ void EventCategorizer::saveEvents(const vector<JPetEvent>& events)
 
 void EventCategorizer::initialiseHistograms(){
 
+
+
+
   // General histograms
   getStatistics().createHistogramWithAxes(
                                           new TH2D("All_XYpos", "Hit position XY", 240, -60.25, 59.75, 240, -60.25, 59.75),
@@ -376,6 +403,14 @@ getStatistics().createHistogramWithAxes(
   "No. of hits","counts"
   );
 
+ 
+for(int i = 0; i< 10 ; i++)
+{
+ getStatistics().createHistogramWithAxes(
+  new TH1D(Form("Hit_Multi%d",i),"Multiplicity of hits(ann&_no_prompt)", 10, 0.5, 10.5),
+  "No. of hits","counts"
+  );
+}
  
   
  
@@ -734,7 +769,10 @@ getStatistics().createHistogramWithAxes(
  "TOT[ps]", "counts"
  );
 
- 
+ getStatistics().createHistogramWithAxes(
+ new TH1D("lifetime", "Difference in time between 1st hit & last hit",500, 0, 250000),
+ "#Delta_t[ps]", "counts"
+ );
 
 
 	    

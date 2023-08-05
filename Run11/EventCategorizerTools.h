@@ -68,10 +68,6 @@ public:
   static double calculatePlaneCenterDistance(const JPetHit& firstHit,
   const JPetHit& secondHit, const JPetHit& thirdHit);
   
-  
-  //x static TEfficiency* Hit_Eff;
-
-
 };
 
 #endif /* !EVENTCATEGORIZERTOOLS_H */
