@@ -24,6 +24,10 @@
 
 using namespace std;
 int hcounta;
+
+
+
+
 /**
 
 * Method for determining type of event - back to back 2 gamma
