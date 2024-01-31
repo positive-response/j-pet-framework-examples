@@ -36,7 +36,8 @@ int main(int argc, const char* argv[])
     manager.registerTask<HitFinder>("HitFinder");
     manager.registerTask<EventFinder>("EventFinder");
     manager.registerTask<Downscaler>("Downscaler");
-    //*/    manager.registerTask<EventCategorizer>("EventCategorizer");
+    */
+    manager.registerTask<EventCategorizer>("EventCategorizer");
 
     /*  
     manager.useTask("TimeWindowCreator", "hld", "tslot.calib");
@@ -45,7 +46,8 @@ int main(int argc, const char* argv[])
     manager.useTask("HitFinder", "phys.sig", "hits");
     manager.useTask("EventFinder", "hits", "unk.evt");
     manager.useTask("Downscaler", "unk.evt", "presel.evt");
-    //*/manager.useTask("EventCategorizer", "presel.evt", "cat.evt");
+    */
+    manager.useTask("EventCategorizer", "presel.evt", "cat.evt");
 
     manager.run(argc, argv);
   }

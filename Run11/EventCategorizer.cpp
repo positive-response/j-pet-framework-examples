@@ -117,6 +117,8 @@ bool EventCategorizer::exec()
       bool is3Gamma= false;
       bool isPrompt= false;
       bool isNeighbourHits= false;
+      bool isAdditionalCuts = false;
+
 
       const int atLeastNAnihilationHits = 2;
       const double TOT_Cut = 65000;
@@ -178,30 +180,9 @@ bool EventCategorizer::exec()
 	if (isAnnihilation && !isPrompt ){
           fEventNoPromptAnn.totalAccepted++;
 	  getStatistics().fillHistogram("Hit_multiplicity_case2", event.getHits().size());
+          isAdditionalCuts = EventCategorizerTools::additionalCuts(event, getStatistics(), fSaveControlHistos, fTOTCalculationType);
 
-	  int numberOfThreshold = 10;
-	  double TOT[numberOfThreshold] = {10000,15000,20000,25000,35000,40000, 45000,50000,55000,60000};
-	  int hitCount = 0;
-	  vector<JPetHit> hits = event.getHits();
-
-	  for(int i = 0; i < numberOfThreshold; i++)
-	  {
-		  hitCount = 0;
-		  double thrTOT = TOT[i];
-		  for(auto hit : event.getHits())
-		  {
-			  if(hit.getEnergy() > thrTOT) 
-			  {
-				  hitCount++;
-			  }
-		  }
-		  if (hitCount >= 4)
-		  {
-                      getStatistics().fillHistogram(Form("Hit_Multi%d", i), event.getHits().size());
-
-		  }
-	  }
-
+          vector<JPetHit> hits = event.getHits();
 	  if(hits.size() == 5)
 	  {
 		  vector<JPetHit> orderedHits = event.getHits();
@@ -238,14 +219,14 @@ bool EventCategorizer::exec()
 				  orderedHits[3].getPos().Angle(orderedHits[4].getPos()) + 
 				  orderedHits[0].getPos().Angle(orderedHits[4].getPos()));
 	
-		  getStatistics().fillHistogram("opening angles between 5 hits",op_Angles );
+		          getStatistics().fillHistogram("opening angles between 5 hits",op_Angles );
 
-		  vector<double> angleVec{orderedHits[0].getPos().Angle(orderedHits[1].getPos()),
+		          vector<double> angleVec{orderedHits[0].getPos().Angle(orderedHits[1].getPos()),
 			  orderedHits[1].getPos().Angle(orderedHits[2].getPos()),
 			  orderedHits[2].getPos().Angle(orderedHits[3].getPos()), 
 			  orderedHits[3].getPos().Angle(orderedHits[4].getPos()), 
 			  orderedHits[0].getPos().Angle(orderedHits[4].getPos())};
-
+                          getStatistics().fillHistogram("Anglevstot", TMath::RadToDeg() * ( angleVec[0]+angleVec[1]+angleVec[2]+angleVec[3]+angleVec[4]), sum5tot);
 
 				  getStatistics().fillHistogram("Angle_1",TMath::RadToDeg() * angleVec[0] );
 				  getStatistics().fillHistogram("Angle_2",TMath::RadToDeg() * angleVec[1] );
@@ -404,22 +385,26 @@ for(int i = 0; i< 5; i++)
   );
 
  getStatistics().createHistogramWithAxes(
-		 new TH2D(Form("tot_vs_positionX%d",i), "TOT vs positionX", 200, 0, 2000000, 200, -60, 60),
+		 new TH2D(Form("tot_vs_positionX%d",i), "TOT vs positionX", 200, 0, 20000, 200, -60, 60),
 		 "TOT(ps)", "position"
 		 );
  getStatistics().createHistogramWithAxes(
-		                  new TH2D(Form("tot_vs_positionY%d",i), "TOT vs positionY", 200, 0, 2000000, 200, -60, 60),
+		                  new TH2D(Form("tot_vs_positionY%d",i), "TOT vs positionY", 200, 0, 20000, 200, -60, 60),
 				                   "TOT(ps)", "position"
 						                    );
  getStatistics().createHistogramWithAxes(
-		                  new TH2D(Form("tot_vs_positionZ%d",i), "TOT vs positionZ", 200, 0, 2000000, 200, -60, 60),
+		                  new TH2D(Form("tot_vs_positionZ%d",i), "TOT vs positionZ", 200, 0, 20000, 200, -60, 60),
 				                   "TOT(ps)", "position"
 						                    );
-
 }
+getStatistics().createHistogramWithAxes(new TH1D(" Residual_time", " Residual_time", 200, 0, 5000), "Residual time(ps)", "counts");
+
+getStatistics().createHistogramWithAxes(new TH1D("TOF_all_hits", "TOF_all_hits", 200, 0, 5000), "TOF(ps)", "counts");
+
+getStatistics().createHistogramWithAxes(new TH1D(" meantime", "meantime of all hits", 200, 0, 10000), "mean time(ps)", "counts");
 
  getStatistics().createHistogramWithAxes(
-		 new TH1D("Angle_5","Distance_between_1st and last hit", 200, 0, 200),			             
+		 new TH1D("Distance_between_1st and last hit","Distance_between_1st and last hit", 200, 0, 200),			             
 		 "distance","counts");
 
 getStatistics().createHistogramWithAxes(
@@ -438,7 +423,7 @@ getStatistics().createHistogramWithAxes(
 		  "theta(degree)","counts");
 
 getStatistics().createHistogramWithAxes(
-	                        new TH1D("sum_TOT_5","SUM tot of 5 hits", 200, 0, 205000),
+	                        new TH1D("sum_TOT_5","SUM tot of 5 hits", 200, 0, 20500),
 			                  "TOT(ps)","counts");
 
 
@@ -524,6 +509,9 @@ getStatistics().createHistogramWithAxes(
     "TOT [ps]", "Number of Hits"
    );
 
+getStatistics().createHistogramWithAxes(
+                                new TH2D("Anglevstot","Angle vs tot", 100, 0, 720, 100, 0,  2000000),
+                                                "angle(deg)","tot(ps)");
 getStatistics().createHistogramWithAxes(
                                           new TH1D("Hit_multiplicity_0","Multiplicity of hits(no cut)", 10, 0.5, 10.5),
                                           "No. of hits","counts");
