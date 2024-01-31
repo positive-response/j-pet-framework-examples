@@ -49,6 +49,9 @@ public:
   static bool removeNeighbourhits(const JPetEvent& event, JPetStatistics& stats,
                                    bool saveHistos,
                                    std::string fTOTCalculation );
+  static bool additionalCuts(const JPetEvent& event, JPetStatistics& stats,
+                                   bool saveHistos,
+                                   std::string fTOTCalculation);
   // static std::pair<int,int, bool> checkFor5gamma(const JPetEvent& event, JPetStatistics& stats,
   //					     bool saveHistos, std::string fTOTCalculation);
   static double calculateDistance(const JPetHit& hit1, const JPetHit& hit2);

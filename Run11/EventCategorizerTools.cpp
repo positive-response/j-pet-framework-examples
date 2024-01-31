@@ -238,6 +238,61 @@ const JPetEvent& event, JPetStatistics& stats, bool saveHistos, Counter& hitCoun
   stats.fillHistogram("Hit_multiplicity_cut2", event.getHits().size());
   return true;
 }
+bool EventCategorizerTools::additionalCuts(const JPetEvent& event, JPetStatistics& stats, bool saveHistos, std::string fTOTCalculationType)
+{
+vector<JPetHit> hits = event.getHits();
+
+double mean_t = 0.0;
+for(int i = 0; i < hits.size(); i++)
+{
+stats.fillHistogram("TOF_all_hits", hits[i].getTime());
+mean_t += hits[i].getTime();
+}
+stats.fillHistogram("meantime", mean_t);
+
+int numberOfThreshold = 10;
+double TOT[numberOfThreshold] = {10000,15000,20000,25000,35000,40000, 45000,50000,55000,60000};
+int hitCount = 0;
+for(int j = 0; j < numberOfThreshold; j++)
+{
+hitCount = 0;
+double thrTOT = TOT[j];
+for(auto hit : event.getHits())
+                  {
+                          if(hit.getEnergy() > thrTOT)
+                          {hitCount++;}
+                  }
+if (hitCount >= 4)
+{
+stats.fillHistogram(Form("Hit_Multi%d", j), event.getHits().size());
+}
+}
+
+if(hits.size()==4)
+{
+double mean_t4 = 0.0;
+for(int k = 0; k < hits.size(); k++){
+mean_t4 += hits[k].getTime();
+}
+
+stats.fillHistogram("meantime_4hits", mean_t4);
+double t_spread = 0.0;
+double sigma_t = 600;
+double R = 0.0;
+for(int a = 0; a < hits.size(); a++)
+{
+stats.fillHistogram("TOF_4_hits", hits[a].getTime());
+t_spread += (hits[a].getTime() - mean_t4);
+}
+
+R = sigma_t * sqrt(0.25*t_spread);
+stats.fillHistogram("Residual_time", R);
+}
+
+}
+  
+
+
   
 
 
