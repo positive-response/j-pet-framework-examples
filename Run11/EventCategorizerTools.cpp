@@ -238,18 +238,105 @@ const JPetEvent& event, JPetStatistics& stats, bool saveHistos, Counter& hitCoun
   stats.fillHistogram("Hit_multiplicity_cut2", event.getHits().size());
   return true;
 }
-bool EventCategorizerTools::additionalCuts(const JPetEvent& event, JPetStatistics& stats, bool saveHistos, std::string fTOTCalculationType)
+/*************************check for 5 gamma*********************/
+
+bool EventCategorizerTools::checkFor5Gamma(const JPetEvent& event, JPetStatistics& stats, bool saveHistos, std::string fTOTCalculationType)
 {
 vector<JPetHit> hits = event.getHits();
 
-double mean_t = 0.0;
+if(hits.size() == 5)
+{
+vector<JPetHit> orderedHits = event.getHits();
+JPetHit temp;
+for(int s = 0; s < hits.size(); s++ ) 
+{
+for(int s_n = s+1; s_n < hits.size(); s_n++)                                                                            
+{
+if(orderedHits[s_n].getEnergy() < orderedHits[s].getEnergy())                                                  
+{                                                                                                                    
+temp = orderedHits[s];                                                           
+orderedHits[s] = orderedHits[s_n];                                                                                    
+orderedHits[s_n] = temp;                                                                                  
+}                                                                                                                        
+}                                                                                                                                                                                       
+}
+double sum5tot = 0.0;
+for(int t = 0; t < hits.size(); t++){
+
+stats.fillHistogram(Form("Individual_tot%d", t), orderedHits[t].getEnergy());
+stats.fillHistogram(Form("tot_vs_positionX%d", t), orderedHits[t].getEnergy(), orderedHits[t].getPosX());
+stats.fillHistogram(Form("tot_vs_positionY%d", t), orderedHits[t].getEnergy(), orderedHits[t].getPosY());
+stats.fillHistogram(Form("tot_vs_positionZ%d", t), orderedHits[t].getEnergy(), orderedHits[t].getPosZ());
+sum5tot += orderedHits[t].getEnergy();
+
+}
+stats.fillHistogram("sum_TOT_5",sum5tot );
+stats.fillHistogram("Distance_between_1st and last hit",( orderedHits[0].getPos() - orderedHits[4].getPos()).Mag() );
+
+sum5tot = 0.0;
+double op_Angles = TMath::RadToDeg() *(orderedHits[0].getPos().Angle(orderedHits[1].getPos()) +
+orderedHits[1].getPos().Angle(orderedHits[2].getPos()) +
+orderedHits[2].getPos().Angle(orderedHits[3].getPos()) +
+orderedHits[3].getPos().Angle(orderedHits[4].getPos()) +
+orderedHits[0].getPos().Angle(orderedHits[4].getPos()));
+
+stats.fillHistogram("opening angles between 5 hits",op_Angles );
+
+vector<double> angleVec{orderedHits[0].getPos().Angle(orderedHits[1].getPos()),
+orderedHits[1].getPos().Angle(orderedHits[2].getPos()),
+orderedHits[2].getPos().Angle(orderedHits[3].getPos()),
+orderedHits[3].getPos().Angle(orderedHits[4].getPos()),
+orderedHits[0].getPos().Angle(orderedHits[4].getPos())};
+stats.fillHistogram("Anglevstot", TMath::RadToDeg() * ( angleVec[0]+angleVec[1]+angleVec[2]+angleVec[3]+angleVec[4]), sum5tot);
+
+stats.fillHistogram("Angle_1",TMath::RadToDeg() * angleVec[0] );
+stats.fillHistogram("Angle_2",TMath::RadToDeg() * angleVec[1] );
+stats.fillHistogram("Angle_3",TMath::RadToDeg() * angleVec[2] );
+stats.fillHistogram("Angle_4",TMath::RadToDeg() * angleVec[3] );
+stats.fillHistogram("Angle_5",TMath::RadToDeg() * angleVec[4] );
+sort(angleVec.begin(), angleVec.end());
+
+stats.fillHistogram("SAngle_1",TMath::RadToDeg() * angleVec[0] );
+stats.fillHistogram("SAngle_5",TMath::RadToDeg() * angleVec[4] );
+stats.fillHistogram("X_5HITS", orderedHits[0].getPosX(), orderedHits[4].getPosX());
+stats.fillHistogram("Y_5HITS", orderedHits[0].getPosY(), orderedHits[4].getPosY());
+stats.fillHistogram("Z_5HITS", orderedHits[0].getPosZ(), orderedHits[4].getPosZ());
+}
+return true;
+}
+/*******************************/
+/**********************************/
+
+bool EventCategorizerTools::additionalCuts(const JPetEvent& event, JPetStatistics& stats, bool saveHistos, std::string fTOTCalculationType)
+{
+vector<JPetHit> hits = event.getHits();
+double sigma_t = 600;  // in ns
+double mean_all = 0.0;
+double t_sum = 0.0;
+
 for(int i = 0; i < hits.size(); i++)
 {
-stats.fillHistogram("TOF_all_hits", hits[i].getTime());
-mean_t += hits[i].getTime();
+stats.fillHistogram("TOF_all_hits", hits[i].getTime()/1000); // in ns
+t_sum += (hits[i].getTime());
 }
-stats.fillHistogram("meantime", mean_t);
 
+mean_all = t_sum/hits.size();
+stats.fillHistogram("meantime", mean_all/1000); //filling histogram in ns
+
+t_sum = 0.0;
+double t_spread_all = 0.0;
+double R_all = 0.0;
+for(int a = 0; a < hits.size(); a++)
+{
+t_spread_all += (mean_all - hits[a].getTime()); //calculation in ns
+}
+
+R_all = sqrt((1/hits.size())*fabs(t_spread_all))/sigma_t;
+stats.fillHistogram("Residual_time", R_all);
+mean_all = 0.0;
+t_spread_all = 0.0;
+R_all = 0.0;
+/*************************************/
 int numberOfThreshold = 10;
 double TOT[numberOfThreshold] = {10000,15000,20000,25000,35000,40000, 45000,50000,55000,60000};
 int hitCount = 0;
@@ -258,45 +345,43 @@ for(int j = 0; j < numberOfThreshold; j++)
 hitCount = 0;
 double thrTOT = TOT[j];
 for(auto hit : event.getHits())
-                  {
-                          if(hit.getEnergy() > thrTOT)
-                          {hitCount++;}
-                  }
+{
+if(hit.getEnergy() > thrTOT)
+{hitCount++;}
+}
+/*
 if (hitCount >= 4)
 {
 stats.fillHistogram(Form("Hit_Multi%d", j), event.getHits().size());
+}*/
 }
-}
-
+/******************************************/
 if(hits.size()==4)
 {
 double mean_t4 = 0.0;
-for(int k = 0; k < hits.size(); k++){
-mean_t4 += hits[k].getTime();
+double t4_sum = 0.0;
+for(int k = 0; k < 4; k++){
+t4_sum += hits[k].getTime();
 }
-
-stats.fillHistogram("meantime_4hits", mean_t4);
+mean_t4 = t4_sum/4;
+t4_sum = 0.0;
+stats.fillHistogram("meantime_4hits", mean_t4/1000);
 double t_spread = 0.0;
-double sigma_t = 600;
 double R = 0.0;
-for(int a = 0; a < hits.size(); a++)
+for(int a = 0; a < 4; a++)
 {
-stats.fillHistogram("TOF_4_hits", hits[a].getTime());
-t_spread += (hits[a].getTime() - mean_t4);
+stats.fillHistogram("TOF_4_hits", hits[a].getTime()/1000);
+t_spread += (mean_t4 - hits[a].getTime());  //in ns
 }
-
-R = sigma_t * sqrt(0.25*t_spread);
-stats.fillHistogram("Residual_time", R);
+mean_t4 = 0.0;
+R = sqrt(0.25*fabs(t_spread))/sigma_t;
+stats.fillHistogram("Residual_time4", R);
+t_spread = 0.0;
+R = 0.0;
 }
-
+return true; 
 }
-  
-
-
-  
-
-
-
+ /*****************************************************/ 
 /** Method for removing neighbouring hits*/
 bool EventCategorizerTools::removeNeighbourhits(
   const JPetEvent& event, JPetStatistics& stats, bool saveHistos,
@@ -304,7 +389,6 @@ bool EventCategorizerTools::removeNeighbourhits(
 {
   
   vector<JPetHit> hits = event.getHits();
-  // stats.fillHistogram("Hit_multiplicity_n2", event.getHits().size());
  if (event.getHits().size() == 2)
    {
      
@@ -422,21 +506,18 @@ bool EventCategorizerTools::removeNeighbourhits(
    }
      
  if (event.getHits().size()==5)
-    {
-      
+    {   
       vector<TVector3> pos;
       vector<double> time;
       vector<double> dist;
       vector<double> dt;
       double tot5 = 0.0;
-      stats.fillHistogram("Hit_multiplicity_n5", event.getHits().size());
-      
+      stats.fillHistogram("Hit_multiplicity_n5", event.getHits().size());      
       for(auto i = 0; i< 6; i++)
         {
           pos.push_back(hits[i].getPos());
           time.push_back(hits[i].getTime());
 	}
-
       for(auto i = 0; i<5; i++)
         {
           for(auto j = i+1; j<5; j++)
@@ -447,18 +528,12 @@ bool EventCategorizerTools::removeNeighbourhits(
               dt.push_back(fabs((d/kLightVelocity_cm_ps) -t));
             }
         }
-
       for (auto i =0; i < 5; i++)
        {
          tot5 = hits[i].getEnergy();
-	 // stats.fillHistogram("5hit_tot", tot5 );
        }
-
       if (saveHistos)
 	{
-	  // stats.fillHistogram("Hit_multiplicity_n5", event.getHits().size());
-	
-	
             for(auto k =1; k<=10; k++)
               {
 		// stats.fillHistogram(Form("D_vs_t%d", k), dist[k-1],dt[k-1]);
@@ -466,17 +541,11 @@ bool EventCategorizerTools::removeNeighbourhits(
 		//		stats.fillHistogram("5hit_tot", tot5 );
 		stats.fillHistogram("D_vs_dt", dist[k-1], dt[k-1]);
 		stats.fillHistogram("dt_vs_dt", dt[k-1],dt[k]);
-		stats.fillHistogram("dt_5_hits", dt[k-1]);
-		  
+		stats.fillHistogram("dt_5_hits", dt[k-1]);		  
               }
           }
       return true;
     }
-/*if (event.getHits().size() == 6)
-{
-	stats.fillHistogram("lifetime", hits[0].getTime() - hits[5].getTime());
-	
-}*/	
  return true;
         
 }
