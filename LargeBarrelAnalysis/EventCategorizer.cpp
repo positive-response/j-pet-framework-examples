@@ -18,6 +18,8 @@
 #include "EventCategorizerTools.h"
 #include "EventCategorizer.h"
 #include <iostream>
+#include <JPetMCHit/JPetMCHit.h>
+#include "HitFinderTools.h"
 
 using namespace jpet_options_tools;
 using namespace std;
@@ -88,11 +90,29 @@ bool EventCategorizer::init()
 }
 
 bool EventCategorizer::exec()
-{
-  if (auto timeWindow = dynamic_cast<const JPetTimeWindow* const>(fEvent)) {
-    vector<JPetEvent> events;
+{ 
+
+	if (auto timeWindow = dynamic_cast<const JPetTimeWindow* const>(fEvent)) {
+
+	auto timeWindowMC = dynamic_cast<const JPetTimeWindowMC* const>(fEvent);
+	vector<JPetEvent> events;
     for (uint i = 0; i < timeWindow->getNumberOfEvents(); i++) {
       const auto& event = dynamic_cast<const JPetEvent&>(timeWindow->operator[](i));
+
+
+	for(const auto & hit : event.getHits())
+	{
+		if(timeWindowMC)
+		{
+			auto mcHit = timeWindowMC->getMCHit<JPetMCHit>(hit.getMCindex());
+			getStatistics().fillHistogram("True Energy", mcHit.getEnergy());
+			getStatistics().fillHistogram("Gengamma_multi_all", mcHit.getGenGammaMultiplicity());
+		}
+	}
+
+
+	getStatistics().fillHistogram("Multiplicity_all", event.getHits().size());
+	
 
       // Check types of current event
       bool is2Gamma = EventCategorizerTools::checkFor2Gamma(
@@ -117,6 +137,9 @@ bool EventCategorizer::exec()
       if(fSaveControlHistos){
         for(auto hit : event.getHits()){
           getStatistics().fillHistogram("All_XYpos", hit.getPosX(), hit.getPosY());
+		  getStatistics().fillHistogram("Energy_all", hit.getEnergy());
+		  
+
         }
       }
       events.push_back(newEvent);
@@ -145,6 +168,10 @@ void EventCategorizer::initialiseHistograms(){
     "Hit X position [cm]", "Hit Y position [cm]"
   );
 
+  getStatistics().createHistogramWithAxes(new TH1D("Multiplicity_all","Multiplicity of all hits(without cut)", 10, 0.5, 10.5), "No. of hits","counts");
+  getStatistics().createHistogramWithAxes( new TH1D("Energy_all", "Energy of hits", 500, 0, 1500), "Energy(keV)", "counts");
+  getStatistics().createHistogramWithAxes( new TH1D("True Energy", "Energy of hits(true)", 500, 0, 1500), "Energy(keV)", "counts");
+  getStatistics().createHistogramWithAxes(new TH1D("Gengamma_multi_all", "Generated gamma multiplicity_all", 10, 0.5, 10.5), "No. of hits","counts");
   // Histograms for 2Gamma category
   getStatistics().createHistogramWithAxes(
     new TH1D("2Gamma_Zpos", "Z-axis position of 2 gamma hits", 201, -50.25, 50.25),
