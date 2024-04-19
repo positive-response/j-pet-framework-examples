@@ -19,6 +19,77 @@
 #include <vector>
 
 using namespace std;
+/**
+ * Method for energy deposition check in mc 
+ */
+bool EventCategorizerTools::checkForEnergyDeposition(const JPetEvent& event, JPetStatistics& stats, bool saveHistos, int n_hits)
+{
+	int eventSize = event.getHits().size();
+	int n = 0;
+	if(eventSize == n_hits){	
+	double energySum = 0.0;
+	n = 0;
+	vector <double> hitEnergy{};
+	double phi = 0.0;
+	for(int i = 0; i < eventSize; i++)
+	{
+		JPetHit hit = event.getHits().at(i);
+		phi = TMath::RadToDeg()*hit.getPos().Phi();
+		if(phi < 20.0)
+		{
+			n++;
+		}
+		hitEnergy.push_back(hit.getEnergy());
+		energySum += hit.getEnergy();
+		stats.fillHistogram(Form("Energy%d", i), hit.getEnergy());
+		stats.fillHistogram("phi_vs_energy", phi, hit.getEnergy());
+		
+	}
+	
+	sort(hitEnergy.begin(), hitEnergy.end());
+	stats.fillHistogram("smallestEnergy", hitEnergy.front());
+	stats.fillHistogram("largestEnergy", hitEnergy.back());
+	stats.fillHistogram("Energy_Sum", energySum);
+	stats.fillHistogram("Edep-Esmall", energySum - hitEnergy.front());
+	stats.fillHistogram("Edep-Elarge", energySum - hitEnergy.back());
+	stats.fillHistogram("Edep_2d", energySum - hitEnergy.front(), energySum - hitEnergy.back());
+	hitEnergy.clear();
+	energySum = 0.0;
+	
+}
+	return true;
+}
+
+bool EventCategorizerTools::checkForSignal(const JPetEvent& event, JPetStatistics& stats, bool saveHistos, int n_hits)
+{
+	int eventSize = event.getHits().size();
+	if(eventSize == n_hits)
+	{
+	double energySum = 0.0;
+	vector <double> hitEnergy{};
+	for(int i = 0; i < eventSize; i++)
+	{
+		JPetHit hit = event.getHits().at(i);
+		auto phi = TMath::RadToDeg()*hit.getPos().Phi();
+		hitEnergy.push_back(hit.getEnergy());
+		energySum += hit.getEnergy();
+		stats.fillHistogram("phi_vs_energy(signal)", phi, hit.getEnergy());
+		stats.fillHistogram(Form("Signal_Energy%d", i), hit.getEnergy());
+	}
+	sort(hitEnergy.begin(), hitEnergy.end());
+	stats.fillHistogram("smallestEnergy(signal)", hitEnergy.front());
+	stats.fillHistogram("largestEnergy(signal)", hitEnergy.back());
+	stats.fillHistogram("Energy_Sum(signal)", energySum);
+	stats.fillHistogram("Edep-Esmall(signal)", energySum - hitEnergy.front());
+	stats.fillHistogram("Edep-Elarge(signal)", energySum - hitEnergy.back());
+	stats.fillHistogram("Edep_2d(signal)", energySum - hitEnergy.front(), energySum - hitEnergy.back());
+	hitEnergy.clear();
+}
+	return true;
+
+}
+
+
 
 /**
 * Method for determining type of event - back to back 2 gamma

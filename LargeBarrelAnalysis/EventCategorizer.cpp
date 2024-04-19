@@ -24,6 +24,8 @@
 using namespace jpet_options_tools;
 using namespace std;
 
+//const double EventCategorizer::kUnknownEventType = 66666666;
+
 EventCategorizer::EventCategorizer(const char* name): JPetUserTask(name) {}
 
 EventCategorizer::~EventCategorizer() {}
@@ -90,29 +92,50 @@ bool EventCategorizer::init()
 }
 
 bool EventCategorizer::exec()
-{ 
-
+{
 	if (auto timeWindow = dynamic_cast<const JPetTimeWindow* const>(fEvent)) {
-
 	auto timeWindowMC = dynamic_cast<const JPetTimeWindowMC* const>(fEvent);
 	vector<JPetEvent> events;
-    for (uint i = 0; i < timeWindow->getNumberOfEvents(); i++) {
-      const auto& event = dynamic_cast<const JPetEvent&>(timeWindow->operator[](i));
 
+    	for (uint i = 0; i < timeWindow->getNumberOfEvents(); i++) {
+	      	const auto& event = dynamic_cast<const JPetEvent&>(timeWindow->operator[](i));
+		bool fEnergyDep = false;
+		bool fSignal = false;
+		fHitType.clear();
 
+      if(timeWindowMC)
+      {
+	      
+	      fEnergyDep = EventCategorizerTools::checkForEnergyDeposition(event, getStatistics(), fSaveControlHistos, n_case);
+      }
+
+      int n = 0;
 	for(const auto & hit : event.getHits())
 	{
 		if(timeWindowMC)
-		{
+		{	
 			auto mcHit = timeWindowMC->getMCHit<JPetMCHit>(hit.getMCindex());
+			fHitType.push_back(mcHit.getGenGammaMultiplicity());
+			fVtxIndex.push_back(mcHit.getMCVtxIndex());
+			if(mcHit.getGenGammaMultiplicity() == n_case)
+			{
+				n++;
+			}
 			getStatistics().fillHistogram("True Energy", mcHit.getEnergy());
 			getStatistics().fillHistogram("Gengamma_multi_all", mcHit.getGenGammaMultiplicity());
 		}
+		else 
+		{
+//			fHitType.push_back(kUnknownEventType);
+			fVtxIndex.push_back(0);
+		}
+	}
+	if(n == n_case)
+	{
+		fSignal = EventCategorizerTools::checkForSignal(event, getStatistics(), fSaveControlHistos, n_case);
 	}
 
-
 	getStatistics().fillHistogram("Multiplicity_all", event.getHits().size());
-	
 
       // Check types of current event
       bool is2Gamma = EventCategorizerTools::checkFor2Gamma(
@@ -127,7 +150,6 @@ bool EventCategorizer::exec()
       bool isScattered = EventCategorizerTools::checkForScatter(
         event, getStatistics(), fSaveControlHistos, fScatterTOFTimeDiff, fTOTCalculationType
       );
-
       JPetEvent newEvent = event;
       if(is2Gamma) newEvent.addEventType(JPetEventType::k2Gamma);
       if(is3Gamma) newEvent.addEventType(JPetEventType::k3Gamma);
@@ -137,13 +159,12 @@ bool EventCategorizer::exec()
       if(fSaveControlHistos){
         for(auto hit : event.getHits()){
           getStatistics().fillHistogram("All_XYpos", hit.getPosX(), hit.getPosY());
-		  getStatistics().fillHistogram("Energy_all", hit.getEnergy());
-		  
-
+	  getStatistics().fillHistogram("Energy_all", hit.getEnergy());	  
         }
       }
+
       events.push_back(newEvent);
-    }
+	} 
     saveEvents(events);
   } else { return false; }
   return true;
@@ -167,7 +188,27 @@ void EventCategorizer::initialiseHistograms(){
     new TH2D("All_XYpos", "Hit position XY", 240, -60.25, 59.75, 240, -60.25, 59.75),
     "Hit X position [cm]", "Hit Y position [cm]"
   );
+for(int i = 0; i < n_case; i++)
+{
+	getStatistics().createHistogramWithAxes(new TH1D(Form("Signal_Energy%d", i), "Energy_of_all_photons(signal)", 500, 0, 1500), "Energy(keV)", "counts");
+  getStatistics().createHistogramWithAxes(new TH1D(Form("Energy%d", i), "Energy_of_all_photons", 500, 0, 1500), "Energy(keV)", "counts");
+}
+ getStatistics().createHistogramWithAxes(new TH2D("phi_vs_energy", "phi_vs_energy", 800, -200, 200, 500, 0,1500), "phi(deg)", "Energy(keV)");
+ getStatistics().createHistogramWithAxes(new TH2D("phi_vs_energy(signal)", "phi_vs_energy(signal)", 800, -200, 200, 500, 0,1500), "phi(deg)", "Energy(keV)");
+  
+  getStatistics().createHistogramWithAxes(new TH1D("smallestEnergy", "smallestEnergy", 500, 0, 1500), "Energy(keV)", "counts");
+  getStatistics().createHistogramWithAxes(new TH1D("largestEnergy", "largestEnergy", 500, 0, 1500), "Energy(keV)", "counts");
+  getStatistics().createHistogramWithAxes(new TH1D("smallestEnergy(signal)", "smallestEnergy", 500, 0, 1500), "Energy(keV)", "counts");
+  getStatistics().createHistogramWithAxes(new TH1D("largestEnergy(signal)", "largestEnergy", 500, 0, 1500), "Energy(keV)", "counts");
+  getStatistics().createHistogramWithAxes(new TH2D("Edep_2d", "Energy_2d", 500, 0, 1500, 500, 0, 1500), "Energy_sum -smallestE(keV)", "Energy_sum -largestE(keV)");
+  getStatistics().createHistogramWithAxes(new TH2D("Edep_2d(signal)", "Energy_2d(signal)", 500, 0, 1500, 500, 0, 1500), "Energy_sum -smallestE(keV)", "Energy_sum -largestE(keV)");
+  getStatistics().createHistogramWithAxes(new TH1D("Energy_Sum(signal)", "Energy_sum(signal)", 500, 0, 1500), "Energy_sum(keV)", "counts");
+  getStatistics().createHistogramWithAxes(new TH1D("Edep-Esmall(signal)", "Energy_sum(signal) - smallest energy ", 500, 0, 1500), "Energy_diff(keV)", "counts");
+  getStatistics().createHistogramWithAxes(new TH1D("Edep-Elarge(signal)", "Energy_sum(signal) - largest energy", 500, 0, 1500), "Energy_diff(keV)", "counts");
 
+  getStatistics().createHistogramWithAxes(new TH1D("Energy_Sum", "Energy_sum", 500, 0, 1500), "Energy_sum(keV)", "counts");
+  getStatistics().createHistogramWithAxes(new TH1D("Edep-Esmall", "Energy_sum - smallest energy ", 500, 0, 1500), "Energy_diff(keV)", "counts");
+  getStatistics().createHistogramWithAxes(new TH1D("Edep-Elarge", "Energy_sum - largest energy", 500, 0, 1500), "Energy_diff(keV)", "counts");
   getStatistics().createHistogramWithAxes(new TH1D("Multiplicity_all","Multiplicity of all hits(without cut)", 10, 0.5, 10.5), "No. of hits","counts");
   getStatistics().createHistogramWithAxes( new TH1D("Energy_all", "Energy of hits", 500, 0, 1500), "Energy(keV)", "counts");
   getStatistics().createHistogramWithAxes( new TH1D("True Energy", "Energy of hits(true)", 500, 0, 1500), "Energy(keV)", "counts");

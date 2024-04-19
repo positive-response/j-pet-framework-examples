@@ -42,13 +42,22 @@ public:
 	virtual bool terminate() override;
 
 protected:
+	const int n_case = 5;
 	const std::string kBack2BackSlotThetaDiffParamKey = "Back2Back_Categorizer_SlotThetaDiff_float";
 	const std::string kScatterTOFTimeDiffParamKey = "Scatter_Categorizer_TOF_TimeDiff_float";
 	const std::string kDeexTOTCutMinParamKey = "Deex_Categorizer_TOT_Cut_Min_float";
 	const std::string kDeexTOTCutMaxParamKey = "Deex_Categorizer_TOT_Cut_Max_float";
 	const std::string kMaxTimeDiffParamKey = "EventCategorizer_MaxTimeDiff_float";
 	const std::string kSaveControlHistosParamKey = "Save_Control_Histograms_bool";
-    const std::string kTOTCalculationType = "HitFinder_TOTCalculationType_std::string";
+        const std::string kTOTCalculationType = "HitFinder_TOTCalculationType_std::string";
+        std::vector<unsigned int> fHitType;
+	std::vector<unsigned int> fVtxIndex;
+	bool fIsAcc = kFALSE;
+        bool fIsOPs = kFALSE;
+        bool fIsPickOff = kFALSE;
+        bool fContainsPrompt = kFALSE;
+        bool fIsScattered = kFALSE;
+        bool fIsSecondary = kFALSE;
 	void saveEvents(const std::vector<JPetEvent>& event);
 	double fScatterTOFTimeDiff = 2000.0;
 	double fB2BSlotThetaDiff = 3.0;

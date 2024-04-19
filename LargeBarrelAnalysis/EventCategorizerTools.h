@@ -40,6 +40,8 @@ public:
   static bool checkForScatter(const JPetEvent& event, JPetStatistics& stats,
                               bool saveHistos, double scatterTOFTimeDiff, 
                               std::string fTOTCalculationType);
+  static bool checkForEnergyDeposition(const JPetEvent& event, JPetStatistics& stats, bool saveHistos, int n_hits);
+  static bool checkForSignal(const JPetEvent& event, JPetStatistics& stats, bool saveHistos, int n_hits);
   static double calculateDistance(const JPetHit& hit1, const JPetHit& hit2);
   static double calculateScatteringTime(const JPetHit& hit1, const JPetHit& hit2);
   static double calculateScatteringAngle(const JPetHit& hit1, const JPetHit& hit2);
