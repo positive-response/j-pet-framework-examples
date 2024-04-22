@@ -19,6 +19,198 @@
 #include <vector>
 
 using namespace std;
+bool EventCategorizerTools::calculateMLParamsBefore(const JPetEvent& event, JPetStatistics& stats, bool saveHistos)
+{
+int eventSize = event.getHits().size();
+	double fTOF = 0.0;
+	double fDistance = 0.0;
+        double fTimeDiff = 0.0;
+	double f3DOpenAngle = 0.0;
+	double f2DOpenAngle = 0.0;
+	double fSmallestEnergy = 0.0;
+	double fLargestEnergy = 0.0;
+	double fSumEnergy = 0.0;
+        double fDiffSumEnergyLarge = 0.0;
+	double fDiffSumEnergySmall = 0.0;
+	double fTheta = 0.0;
+	double fPhi = 0.0;
+	vector <double> hitEnergy{};
+	vector <double> M{};
+
+for(int i = 0; i < eventSize; i++)
+{
+	auto hitFirst = event.getHits().at(i);
+	TVector3 v1(hitFirst.getPos());
+	
+	for(int j = i+1 ; j < eventSize; j++)
+	{
+		auto& hitSecond = event.getHits().at(j);
+		TVector3 v2(hitSecond.getPos());
+		fTOF = EventCategorizerTools::calculateTOFByConvention(hitFirst, hitSecond);
+		fDistance = EventCategorizerTools::calculateDistance(hitFirst, hitSecond);
+		fTimeDiff = fTOF - fDistance/kLightVelocity_cm_ps;
+		f3DOpenAngle = EventCategorizerTools::calculateScatteringAngle(hitFirst, hitSecond);
+		f2DOpenAngle = EventCategorizerTools::calculate2DOpenAngles(v1, v2);
+
+		M.push_back(fTOF);
+		stats.fillHistogram("TOFB", fTOF);
+		stats.fillHistogram("TOF_vs_distanceB", fTOF, fDistance);
+		stats.fillHistogram("TOF_vs_timeDifferenceB", fTOF,fTimeDiff);
+		stats.fillHistogram("3DOpenAngleB", f3DOpenAngle);
+		stats.fillHistogram("2DopenAngleB", f2DOpenAngle);
+
+		if(eventSize == 5)
+		{
+
+			         stats.fillHistogram("TOF", fTOF);
+		 		 stats.fillHistogram("TOF_vs_distance", fTOF, fDistance);
+			 	 stats.fillHistogram("TOF_vs_timeDifference", fTOF,fTimeDiff);
+				 stats.fillHistogram("3DOpenAngle", f3DOpenAngle);
+                                 stats.fillHistogram("2DopenAngle", f2DOpenAngle);
+		}
+		
+	}
+	fSumEnergy += hitFirst.getEnergy();
+	hitEnergy.push_back(hitFirst.getEnergy());
+	fTheta = TMath::RadToDeg() * hitFirst.getPos().Theta();
+	fPhi = TMath::RadToDeg() * hitFirst.getPos().Phi();
+	stats.fillHistogram("ThetaB", fTheta);
+	stats.fillHistogram("PhiB", fPhi);
+
+}
+for(int hi = 0; hi < eventSize; hi++)
+{
+	JPetHit hit = event.getHits().at(hi);
+	hitEnergy.push_back(hit.getEnergy());
+	fSumEnergy += hit.getEnergy();
+}
+sort(M.begin(), M.end());
+sort(hitEnergy.begin(), hitEnergy.end());
+
+fSmallestEnergy = hitEnergy.front();
+fLargestEnergy = hitEnergy.back();
+fDiffSumEnergyLarge = fSumEnergy - fSmallestEnergy;
+fDiffSumEnergySmall = fSumEnergy - fLargestEnergy;
+
+stats.fillHistogram("M_ijB", M.front());
+stats.fillHistogram("SmallestEnergyB", fSmallestEnergy);
+stats.fillHistogram("LargestEnergyB", fLargestEnergy);
+stats.fillHistogram("EnergySumB", fSumEnergy);
+stats.fillHistogram("EnergySum-largestB", fDiffSumEnergyLarge);
+stats.fillHistogram("EnergySum-SmallestB", fDiffSumEnergySmall);
+stats.fillHistogram("EnergySum-Smallest_vs_EnergySum-largestB", fDiffSumEnergySmall, fDiffSumEnergyLarge);
+hitEnergy.clear();
+fSumEnergy = 0.0;
+return true;
+}
+
+
+
+bool EventCategorizerTools::calculateMLParamsAfter(const JPetEvent& event, JPetStatistics& stats, bool saveHistos)
+{
+int eventSize = event.getHits().size();
+	double fTOF = 0.0;
+	double fDistance = 0.0;
+        double fTimeDiff = 0.0;
+	double f3DOpenAngle = 0.0;
+	double f2DOpenAngle = 0.0;
+	double fSmallestEnergy = 0.0;
+	double fLargestEnergy = 0.0;
+	double fSumEnergy = 0.0;
+        double fDiffSumEnergyLarge = 0.0;
+	double fDiffSumEnergySmall = 0.0;
+	double fTheta = 0.0;
+	double fPhi = 0.0;
+	vector <double> hitEnergy{};
+	vector <double> M{};
+
+for(int i = 0; i < eventSize; i++)
+{
+	auto hitFirst = event.getHits().at(i);
+	TVector3 v1(hitFirst.getPos());
+	
+	for(int j = i+1 ; j < eventSize; j++)
+	{
+		auto& hitSecond = event.getHits().at(j);
+		TVector3 v2(hitSecond.getPos());
+		fTOF = EventCategorizerTools::calculateTOFByConvention(hitFirst, hitSecond);
+		fDistance = EventCategorizerTools::calculateDistance(hitFirst, hitSecond);
+		fTimeDiff = fTOF - fDistance/kLightVelocity_cm_ps;
+		f3DOpenAngle = EventCategorizerTools::calculateScatteringAngle(hitFirst, hitSecond);
+		f2DOpenAngle = EventCategorizerTools::calculate2DOpenAngles(v1, v2);
+
+		M.push_back(fTimeDiff);
+		stats.fillHistogram("TOF", fTOF);
+		stats.fillHistogram("TOF_vs_distance", fTOF, fDistance);
+		stats.fillHistogram("TOF_vs_timeDifference", fTOF,fTimeDiff);
+		stats.fillHistogram("3DOpenAngle", f3DOpenAngle);
+		stats.fillHistogram("2DopenAngle", f2DOpenAngle);
+		
+	}
+	fSumEnergy += hitFirst.getEnergy();
+	hitEnergy.push_back(hitFirst.getEnergy());
+	fTheta = TMath::RadToDeg() * hitFirst.getPos().Theta();
+	fPhi = TMath::RadToDeg() * hitFirst.getPos().Phi();
+	stats.fillHistogram("Theta", fTheta);
+	stats.fillHistogram("Phi", fPhi);
+
+}
+for(int hi = 0; hi < eventSize; hi++)
+{
+	JPetHit hit = event.getHits().at(hi);
+	hitEnergy.push_back(hit.getEnergy());
+	fSumEnergy += hit.getEnergy();
+}
+sort(M.begin(), M.end());
+sort(hitEnergy.begin(), hitEnergy.end());
+
+fSmallestEnergy = hitEnergy.front();
+fLargestEnergy = hitEnergy.back();
+fDiffSumEnergyLarge = fSumEnergy - fSmallestEnergy;
+fDiffSumEnergySmall = fSumEnergy - fLargestEnergy;
+
+stats.fillHistogram("M_ij", M.front());
+stats.fillHistogram("SmallestEnergy", fSmallestEnergy);
+stats.fillHistogram("LargestEnergy", fLargestEnergy);
+stats.fillHistogram("EnergySum", fSumEnergy);
+stats.fillHistogram("EnergySum-largest", fDiffSumEnergyLarge);
+stats.fillHistogram("EnergySum-Smallest", fDiffSumEnergySmall);
+stats.fillHistogram("EnergySum-Smallest_vs_EnergySum-largest", fDiffSumEnergySmall, fDiffSumEnergyLarge);
+hitEnergy.clear();
+fSumEnergy = 0.0;
+return true;
+}
+
+
+bool EventCategorizerTools::checkForInitialCuts(const JPetEvent& event, JPetStatistics& stats, bool saveHistos, double fLowEnergyCut, double fAnnihilationEnergyCut)
+{
+	int eventSize = event.getHits().size();
+	bool isInitialCut = true;
+	int n = 0;
+	for(auto & hit: event.getHits())
+	{
+		stats.fillHistogram("Hit_Z_POS(before)", hit.getPosZ());
+		stats.fillHistogram("Energy(before)", hit.getEnergy());
+		if(abs(hit.getPosZ()) < 23 && hit.getEnergy() < fAnnihilationEnergyCut && hit.getEnergy() > fLowEnergyCut)
+		{
+			n++;
+			isInitialCut = true;
+			stats.fillHistogram("Hit_Z_POS(after)", hit.getPosZ());
+			stats.fillHistogram("Energy(after)", hit.getEnergy());
+		}
+		else	
+		{
+			isInitialCut = false;
+		
+		}
+	}
+	if (n != eventSize)
+		return false;
+	else
+		return true;
+}
+
+
 
 /**
 * Method for determining type of event - back to back 2 gamma
@@ -196,6 +388,16 @@ double EventCategorizerTools::calculateScatteringAngle(const JPetHit& hit1, cons
 {
   return TMath::RadToDeg() * hit1.getPos().Angle(hit2.getPos() - hit1.getPos());
 }
+/**
+ * calculate 2D angle between hits
+ * */
+double EventCategorizerTools::calculate2DOpenAngles(const TVector3& hit1, const TVector3& hit2)
+{
+     TVector3 hitFirst (hit1.X(), hit1.Y(), 0.0); 
+     TVector3 hitSecond (hit2.X(), hit2.Y(), 0.0);
+       return TMath::RadToDeg() * hitFirst.Angle(hitSecond);
+}
+
 
 /**
 * Calculation point in 3D, where annihilation occured

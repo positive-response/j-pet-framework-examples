@@ -40,6 +40,9 @@ public:
   static bool checkForScatter(const JPetEvent& event, JPetStatistics& stats,
                               bool saveHistos, double scatterTOFTimeDiff, 
                               std::string fTOTCalculationType);
+  static bool checkForInitialCuts(const JPetEvent& event, JPetStatistics& stats, bool saveHistos, double fLowEnergyCut, double fAnnihilationEnergyCut);
+  static bool calculateMLParamsAfter(const JPetEvent& event, JPetStatistics& stats, bool saveHistos);
+  static bool calculateMLParamsBefore(const JPetEvent& event, JPetStatistics& stats, bool saveHistos);
   static double calculateDistance(const JPetHit& hit1, const JPetHit& hit2);
   static double calculateScatteringTime(const JPetHit& hit1, const JPetHit& hit2);
   static double calculateScatteringAngle(const JPetHit& hit1, const JPetHit& hit2);
@@ -51,6 +54,7 @@ public:
   /// See also: http://koza.if.uj.edu.pl/petwiki/index.php/Coordinate_system_in_Big_Barrel
 
   // cppcheck-suppress unusedFunction
+  static double calculate2DOpenAngles(const TVector3& hit1, const TVector3& hit2);
   static double calculateTOFByConvention(const JPetHit& hitA, const JPetHit& hitB);
   static TVector3 calculateAnnihilationPoint(const JPetHit& hitA, const JPetHit& hitB);
   static TVector3 calculateAnnihilationPoint(const TVector3& hitA, const TVector3& hitB, double tof);

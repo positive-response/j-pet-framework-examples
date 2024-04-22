@@ -41,6 +41,8 @@ public:
 	virtual bool exec() override;
 	virtual bool terminate() override;
 
+	static const double kUnknownEventType;
+
 protected:
 	const std::string kBack2BackSlotThetaDiffParamKey = "Back2Back_Categorizer_SlotThetaDiff_float";
 	const std::string kScatterTOFTimeDiffParamKey = "Scatter_Categorizer_TOF_TimeDiff_float";
@@ -48,7 +50,7 @@ protected:
 	const std::string kDeexTOTCutMaxParamKey = "Deex_Categorizer_TOT_Cut_Max_float";
 	const std::string kMaxTimeDiffParamKey = "EventCategorizer_MaxTimeDiff_float";
 	const std::string kSaveControlHistosParamKey = "Save_Control_Histograms_bool";
-    const std::string kTOTCalculationType = "HitFinder_TOTCalculationType_std::string";
+        const std::string kTOTCalculationType = "HitFinder_TOTCalculationType_std::string";
 	void saveEvents(const std::vector<JPetEvent>& event);
 	double fScatterTOFTimeDiff = 2000.0;
 	double fB2BSlotThetaDiff = 3.0;
@@ -56,7 +58,27 @@ protected:
 	double fDeexTOTCutMax = 50000.0;
 	double fMaxTimeDiff = 1000.;
 	bool fSaveControlHistos = true;
-    std::string fTOTCalculationType = "";
+        std::string fTOTCalculationType = "";
 	void initialiseHistograms();
+
+	double flowEnergyCut = 30;
+	double fAnnihilationEnergyCut = 650;
+
+	std::unique_ptr<TFile> fOutFile;
+	std::string fInName;
+	jpet_options_tools::OptsStrAny opts;
+
+	TTree* pTree = nullptr;
+
+	int fTimeWindowNumber = 0;
+	int fEventNumber =0;
+	int fNumberOfHits = 0;
+	std::vector<float> fPosX;
+	std::vector<float> fPosY;
+	std::vector<float> fPosZ;
+	std::vector<float> fEnergy;
+	std::vector<float> fTime;
+	std::vector<unsigned int> fVtxIndex;
+	std::vector<unsigned int> fHitTYpe;
 };
 #endif /* !EVENTCATEGORIZER_H */
