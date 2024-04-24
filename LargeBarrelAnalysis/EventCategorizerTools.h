@@ -54,7 +54,7 @@ public:
   /// See also: http://koza.if.uj.edu.pl/petwiki/index.php/Coordinate_system_in_Big_Barrel
 
   // cppcheck-suppress unusedFunction
-  static double calculate2DOpenAngles(const TVector3& hit1, const TVector3& hit2);
+  static double calculate2DOpenAngles(const JPetHit& hit1, const JPetHit& hit2);
   static double calculateTOFByConvention(const JPetHit& hitA, const JPetHit& hitB);
   static TVector3 calculateAnnihilationPoint(const JPetHit& hitA, const JPetHit& hitB);
   static TVector3 calculateAnnihilationPoint(const TVector3& hitA, const TVector3& hitB, double tof);
