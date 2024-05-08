@@ -20,154 +20,86 @@
 
 using namespace std;
 
-bool EventCategorizerTools::calculateMLParamsBefore(const JPetEvent& event, JPetStatistics& stats, bool saveHistos)
+bool EventCategorizerTools::calculateMLParams(const JPetEvent& event, JPetStatistics& stats, bool saveHistos, const std::string& postfix)
 {
-stats.fillHistogram("Hit_Multiplicity_before", event.getHits().size());
 int eventSize = event.getHits().size();
+
+stats.fillHistogram(("Hit_Multiplicity " + postfix).c_str(), event.getHits().size());
+
 double fTOF = 0.0;
 double fDistance = 0.0;
 double fTimeDiff = 0.0;
 double f3DOpenAngle = 0.0;
-double f2DOpenAngle = 0.0;
 double fSumEnergy = 0.0;
-double fTheta = 0.0;
-double fPhi = 0.0;
-std::vector <double> hitEnergy(5);
-std::vector <double> M(10);
 
-for(int i = 0; i < eventSize; i++)
+double smallestEnergy = std::numeric_limits<double>::max();
+double largestEnergy = std::numeric_limits<double>::lowest();
+
+std::vector<double> M(10);
+
+for(int hi = 0; hi < eventSize; hi++)
 {
-	auto hitFirst = event.getHits().at(i);
-	TVector3 v1(hitFirst.getPos());
-	
-	for(int j = i+1 ; j < eventSize; j++)
-	{
-		auto& hitSecond = event.getHits().at(j);
-		TVector3 v2(hitSecond.getPos());
+	JPetHit hit = event.getHits().at(hi);
+	double energy = hit.getEnergy();
+
+	if(energy < smallestEnergy){
+		smallestEnergy = energy; }
+	if(energy > largestEnergy){
+		largestEnergy = energy; }
+
+	fSumEnergy += energy;
+
+	stats.fillHistogram(("Theta " + postfix).c_str(), TMath::RadToDeg() * hit.getPos().Theta());
+	stats.fillHistogram(("Phi " + postfix).c_str(), TMath::RadToDeg() * hit.getPos().Phi());
+}
+
+stats.fillHistogram(("SmallestEnergy " + postfix).c_str(), smallestEnergy);
+stats.fillHistogram(("LargestEnergy " + postfix).c_str(), largestEnergy);
+stats.fillHistogram(("EnergySum " + postfix).c_str(), fSumEnergy);
+stats.fillHistogram(("EnergySum-largest " + postfix).c_str(), fSumEnergy - largestEnergy);
+stats.fillHistogram(("EnergySum-Smallest " + postfix).c_str(), fSumEnergy - smallestEnergy);
+stats.fillHistogram(("EnergySum-Smallest_vs_EnergySum-largest "+ postfix).c_str(), fSumEnergy - smallestEnergy, fSumEnergy - largestEnergy);
+
+fSumEnergy = 0.0;
+smallestEnergy = std::numeric_limits<double>::max();
+largestEnergy = std::numeric_limits<double>::lowest();
+
+
+for(int i = 0; i < eventSize; i++){
+	for(int j = i+1 ; j < eventSize; j++){	
+		const auto& hitFirst = event.getHits().at(i);
+		const auto& hitSecond = event.getHits().at(j);
 		fTOF = EventCategorizerTools::calculateTOFByConvention(hitFirst, hitSecond);
 		fDistance = EventCategorizerTools::calculateDistance(hitFirst, hitSecond);
 		fTimeDiff = fTOF - fDistance/kLightVelocity_cm_ps;
 		f3DOpenAngle = EventCategorizerTools::calculateScatteringAngle(hitFirst, hitSecond);
-		f2DOpenAngle = EventCategorizerTools::calculate2DOpenAngles(hitFirst, hitSecond);
 
                 M.push_back(fTimeDiff);
-		stats.fillHistogram("TOFB", fTOF);
-                stats.fillHistogram("M_ij_vs_distanceB", fTimeDiff, fDistance);
-		stats.fillHistogram("TOF_vs_distanceB", fTOF, fDistance);
-		stats.fillHistogram("TOF_vs_timeDifferenceB", fTOF,fTimeDiff);
-		stats.fillHistogram("3DOpenAngleB", f3DOpenAngle);
-		stats.fillHistogram("2DopenAngleB", f2DOpenAngle);
+		stats.fillHistogram(("M_ij " + postfix).c_str(), fTimeDiff);
+		stats.fillHistogram(("TOF " + postfix).c_str(), fTOF);
+		stats.fillHistogram(("Distance " + postfix).c_str(), fDistance);
+                stats.fillHistogram(("M_ij_vs_distance " + postfix).c_str(), fTimeDiff, fDistance);
+		stats.fillHistogram(("TOF_vs_distance " + postfix).c_str(), fTOF, fDistance);
+		stats.fillHistogram(("TOF_vs_timeDifference " + postfix).c_str(), fTOF,fTimeDiff);
+		stats.fillHistogram(("3DOpenAngle " + postfix).c_str(), f3DOpenAngle);
 	}
-
 }
-fSumEnergy = 0.0;
-for(int hi = 0; hi < eventSize; hi++)
-{
-	JPetHit hit = event.getHits().at(hi);
-	hitEnergy.push_back(hit.getEnergy());
-	fSumEnergy += hit.getEnergy();
-        fTheta = TMath::RadToDeg() * hit.getPos().Theta();
-	fPhi = TMath::RadToDeg() * hit.getPos().Phi();
-	stats.fillHistogram("ThetaB", fTheta);
-	stats.fillHistogram("PhiB", fPhi);
-}
-
 sort(M.begin(), M.end());
-sort(hitEnergy.begin(), hitEnergy.end());
-
-stats.fillHistogram("M_ijB", M.front());
-stats.fillHistogram("SmallestEnergyB", hitEnergy.front());
-stats.fillHistogram("LargestEnergyB", hitEnergy.back());
-stats.fillHistogram("EnergySumB", fSumEnergy);
-stats.fillHistogram("EnergySum-largestB", fSumEnergy - hitEnergy.back());
-stats.fillHistogram("EnergySum-SmallestB", fSumEnergy - hitEnergy.front());
-stats.fillHistogram("EnergySum-Smallest_vs_EnergySum-largestB", fSumEnergy - hitEnergy.front(), fSumEnergy - hitEnergy.back());
-hitEnergy.clear();
+stats.fillHistogram(("M_ij_minimum " + postfix).c_str(), M.front());
+stats.fillHistogram(("M_ij_maximum " + postfix).c_str(), M.back());
 M.clear();
-fSumEnergy = 0.0;
-
 return true;
 }
 
-bool EventCategorizerTools::calculateMLParamsAfter(const JPetEvent& event, JPetStatistics& stats, bool saveHistos)
+/***********************
+ *
+ *Function for initial cuts
+ *
+ ***********************/
+std::vector<JPetHit> EventCategorizerTools::checkForInitialCuts(const JPetEvent& event, JPetStatistics& stats, bool saveHistos, double fLowEnergyCut, double fAnnihilationEnergyCut, int hitRequired)
 {
-
-stats.fillHistogram("Hit_Multiplicity_after", event.getHits().size());
-
-int eventSize = event.getHits().size();
-double fTOF = 0.0;
-double fDistance = 0.0;
-double fTimeDiff = 0.0;
-double f3DOpenAngle = 0.0;
-double f2DOpenAngle = 0.0;
-double fSumEnergy = 0.0;
-double fTheta = 0.0;
-double fPhi = 0.0;
-vector <double> hitEnergy(5);
-std::vector <double> M(10);
-
-for(int i = 0; i < eventSize; i++)
-{
-	auto hitFirst = event.getHits().at(i);
-	TVector3 v1(hitFirst.getPos());
-	
-	for(int j = i+1 ; j < eventSize; j++)
-	{
-		auto& hitSecond = event.getHits().at(j);
-		TVector3 v2(hitSecond.getPos());
-		fTOF = EventCategorizerTools::calculateTOFByConvention(hitFirst, hitSecond);
-		fDistance = EventCategorizerTools::calculateDistance(hitFirst, hitSecond);
-		fTimeDiff = fTOF - fDistance/kLightVelocity_cm_ps;
-		f3DOpenAngle = EventCategorizerTools::calculateScatteringAngle(hitFirst, hitSecond);
-		f2DOpenAngle = EventCategorizerTools::calculate2DOpenAngles(hitFirst, hitSecond);
-
-                M.push_back(fTimeDiff);
-		stats.fillHistogram("TOF", fTOF);
-		stats.fillHistogram("M_ij_vs_distanceB", fTimeDiff, fDistance);
-		stats.fillHistogram("TOF_vs_distance", fTOF, fDistance);
-		stats.fillHistogram("TOF_vs_timeDifference", fTOF,fTimeDiff);
-		stats.fillHistogram("3DOpenAngle", f3DOpenAngle);
-		stats.fillHistogram("2DopenAngle", f2DOpenAngle);
-	}
-
-}
-
-fSumEnergy = 0.0;
-for(int hi = 0; hi < eventSize; hi++)
-{
-	JPetHit hit = event.getHits().at(hi);
-	hitEnergy.push_back(hit.getEnergy());
-	fSumEnergy += hit.getEnergy();
-        fTheta = TMath::RadToDeg() * hit.getPos().Theta();
-	fPhi = TMath::RadToDeg() * hit.getPos().Phi();
-	stats.fillHistogram("Theta", fTheta);
-	stats.fillHistogram("Phi", fPhi);
-}
-
-sort(M.begin(), M.end());
-sort(hitEnergy.begin(), hitEnergy.end());
-
-stats.fillHistogram("M_ij", M.front());
-stats.fillHistogram("SmallestEnergy", hitEnergy.front());
-stats.fillHistogram("LargestEnergy", hitEnergy.back());
-stats.fillHistogram("EnergySum", fSumEnergy);
-stats.fillHistogram("EnergySum-largest", fSumEnergy - hitEnergy.back());
-stats.fillHistogram("EnergySum-Smallest", fSumEnergy - hitEnergy.front());
-stats.fillHistogram("EnergySum-Smallest_vs_EnergySum-largest", fSumEnergy - hitEnergy.front(), fSumEnergy - hitEnergy.back());
-
-hitEnergy.clear();
-M.clear();
-fSumEnergy = 0.0;
-
-return true;
-}
-
-
-bool EventCategorizerTools::checkForInitialCuts(const JPetEvent& event, JPetStatistics& stats, bool saveHistos, double fLowEnergyCut, double fAnnihilationEnergyCut)
-{
-	int eventSize = event.getHits().size();
-	bool isInitialCut = true;
 	int n = 0;
+	std::vector<JPetHit> selectedEvent;
 	for(auto & hit: event.getHits())
 	{
 		stats.fillHistogram("Hit_Z_POS(before)", hit.getPosZ());
@@ -175,23 +107,20 @@ bool EventCategorizerTools::checkForInitialCuts(const JPetEvent& event, JPetStat
 		if(abs(hit.getPosZ()) < 23 && hit.getEnergy() < fAnnihilationEnergyCut && hit.getEnergy() > fLowEnergyCut)
 		{
 			n++;
-			isInitialCut = true;
+			selectedEvent.push_back(hit);
 			stats.fillHistogram("Hit_Z_POS(after)", hit.getPosZ());
 			stats.fillHistogram("Energy(after)", hit.getEnergy());
 		}
 		else	
-		{
-			isInitialCut = false;
-		
-		}
+			continue;
 	}
-	if (n != eventSize)
-		return false;
-	else
-		return true;
+	if (n == hitRequired)
+		return selectedEvent;
+	else{
+		selectedEvent.clear();
+		return {};
+	}
 }
-
-
 
 /**
 * Method for determining type of event - back to back 2 gamma

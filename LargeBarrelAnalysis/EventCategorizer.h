@@ -22,6 +22,10 @@
 #include <JPetHit/JPetHit.h>
 #include <vector>
 #include <map>
+#include <cstdlib>
+#include <string>
+#include "TFile.h"
+
 
 class JPetWriter;
 
@@ -51,7 +55,10 @@ protected:
 	const std::string kMaxTimeDiffParamKey = "EventCategorizer_MaxTimeDiff_float";
 	const std::string kSaveControlHistosParamKey = "Save_Control_Histograms_bool";
         const std::string kTOTCalculationType = "HitFinder_TOTCalculationType_std::string";
+	const std::string kHitReqParamKey = "hitReq_int";
+		
 	void saveEvents(const std::vector<JPetEvent>& event);
+	int fHitRequired = 5; 
 	double fScatterTOFTimeDiff = 2000.0;
 	double fB2BSlotThetaDiff = 3.0;
 	double fDeexTOTCutMin = 30000.0;
@@ -61,24 +68,36 @@ protected:
         std::string fTOTCalculationType = "";
 	void initialiseHistograms();
 
+	int random = rand();
+	std::string Name = "test"+std::to_string(random)+".root";
+        //TFile *file = TFile::Open(Name.c_str(), "RECREATE");	
+	TTree* pTree22 = nullptr;
+
 	double flowEnergyCut = 30;
 	double fAnnihilationEnergyCut = 650;
+	
 
-	std::unique_ptr<TFile> fOutFile;
-	std::string fInName;
-	jpet_options_tools::OptsStrAny opts;
-
-	TTree* pTree = nullptr;
-
-	int fTimeWindowNumber = 0;
-	int fEventNumber =0;
-	int fNumberOfHits = 0;
-	std::vector<float> fPosX;
-	std::vector<float> fPosY;
-	std::vector<float> fPosZ;
-	std::vector<float> fEnergy;
-	std::vector<float> fTime;
-	std::vector<unsigned int> fVtxIndex;
-	std::vector<unsigned int> fHitTYpe;
+        int fTimeWindowNumber = 0;
+        int fEventNumber = 0;
+        int fNumberOfHits = 0;
+        std::vector<float> fPosX {};
+        std::vector<float> fPosY {};
+        std::vector<float> fPosZ {};
+        std::vector<float> fEnergy {};
+        std::vector<float> fTime {};
+	std::vector<unsigned int> fHitType {};
+	std::vector<unsigned int> fVtxIndex {};
+        float fRecoOrthoVtxPosX = 0;
+        float fRecoOrthoVtxPosY = 0;
+        float fRecoOrthoVtxPosZ = 0;
+        bool fIsAcc = kFALSE;
+        bool fIsOPs = kFALSE;
+        bool fIsPickOff = kFALSE;
+        bool fContainsPrompt = kFALSE;
+        bool fIsScattered = kFALSE;
+        bool fIsSecondary = kFALSE;
+        float fTimeDiff = -100000.0;
 };
+
 #endif /* !EVENTCATEGORIZER_H */
+

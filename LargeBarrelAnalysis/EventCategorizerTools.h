@@ -19,7 +19,7 @@
 #include <JPetStatistics/JPetStatistics.h>
 #include <JPetEvent/JPetEvent.h>
 #include <JPetHit/JPetHit.h>
-
+#include <vector>
 static const double kLightVelocity_cm_ps = 0.0299792458;
 static const double kUndefinedValue = 999.0;
 
@@ -40,9 +40,8 @@ public:
   static bool checkForScatter(const JPetEvent& event, JPetStatistics& stats,
                               bool saveHistos, double scatterTOFTimeDiff, 
                               std::string fTOTCalculationType);
-  static bool checkForInitialCuts(const JPetEvent& event, JPetStatistics& stats, bool saveHistos, double fLowEnergyCut, double fAnnihilationEnergyCut);
-  static bool calculateMLParamsAfter(const JPetEvent& event, JPetStatistics& stats, bool saveHistos);
-  static bool calculateMLParamsBefore(const JPetEvent& event, JPetStatistics& stats, bool saveHistos);
+  static std::vector<JPetHit> checkForInitialCuts(const JPetEvent& event, JPetStatistics& stats, bool saveHistos, double fLowEnergyCut, double fAnnihilationEnergyCut, int hitRequired);
+  static bool calculateMLParams(const JPetEvent& event, JPetStatistics& stats, bool saveHistos, const std::string& postfix);
   static double calculateDistance(const JPetHit& hit1, const JPetHit& hit2);
   static double calculateScatteringTime(const JPetHit& hit1, const JPetHit& hit2);
   static double calculateScatteringAngle(const JPetHit& hit1, const JPetHit& hit2);

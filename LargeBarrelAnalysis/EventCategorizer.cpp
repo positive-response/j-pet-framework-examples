@@ -24,6 +24,8 @@
 using namespace jpet_options_tools;
 using namespace std;
 
+const double EventCategorizer::kUnknownEventType = 66666666;
+
 EventCategorizer::EventCategorizer(const char* name): JPetUserTask(name) {}
 
 EventCategorizer::~EventCategorizer() {}
@@ -31,6 +33,19 @@ EventCategorizer::~EventCategorizer() {}
 bool EventCategorizer::init()
 {
   INFO("Event categorization started.");
+
+pTree22 = new TTree("T","flat tree");
+pTree22->Branch("eventNumber",&fEventNumber,"eventNumber/I");
+pTree22->Branch("numberOfHits",&fNumberOfHits,"numberOfHits/I");
+pTree22->Branch("x",&fPosX);
+pTree22->Branch("y",&fPosY);
+pTree22->Branch("z",&fPosZ);
+pTree22->Branch("energy",&fEnergy);
+pTree22->Branch("time",&fTime);
+pTree22->Branch("hitType",&fHitType);
+pTree22->Branch("vtxIndex",&fVtxIndex);
+
+
   // Parameter for back to back categorization
   if (isOptionSet(fParams.getOptions(), kBack2BackSlotThetaDiffParamKey)){
     fB2BSlotThetaDiff = getOptionAsFloat(fParams.getOptions(), kBack2BackSlotThetaDiffParamKey);
@@ -49,6 +64,17 @@ bool EventCategorizer::init()
       kScatterTOFTimeDiffParamKey.c_str(), fScatterTOFTimeDiff
     ));
   }
+// parameter for hit required
+if (isOptionSet(fParams.getOptions(), kHitReqParamKey)) {
+    fHitRequired = getOptionAsFloat(fParams.getOptions(), kHitReqParamKey);
+  } else {
+    WARNING(Form(
+      "No value of the %s parameter provided by the user. Using default value of %lf.",
+      kHitReqParamKey.c_str(), fHitRequired
+    ));
+  }
+
+
   // Parameters for deexcitation TOT cut
   if (isOptionSet(fParams.getOptions(), kDeexTOTCutMinParamKey)) {
     fDeexTOTCutMin = getOptionAsFloat(fParams.getOptions(), kDeexTOTCutMinParamKey);
@@ -90,56 +116,137 @@ bool EventCategorizer::init()
 }
 
 bool EventCategorizer::exec()
-{ 	
-	if (auto timeWindow = dynamic_cast<const JPetTimeWindow* const>(fEvent)) {
-	auto timeWindowMC = dynamic_cast<const JPetTimeWindowMC* const>(fEvent);
-	vector<JPetEvent> events;
-    
-	for (uint i = 0; i < timeWindow->getNumberOfEvents(); i++) {
-	  	const auto& event = dynamic_cast<const JPetEvent&>(timeWindow->operator[](i));
-		bool isMLParamsBefore = false;
- 		bool isMLParamsAfter = false;
-		bool isInitialCutPassed = false;
+{
 
-isMLParamsBefore = EventCategorizerTools::calculateMLParamsBefore(event, getStatistics(), fSaveControlHistos);
+fEventNumber = 0;
+fNumberOfHits = 0;
+	
+if (auto timeWindow = dynamic_cast<const JPetTimeWindow* const>(fEvent)) {
+auto timeWindowMC = dynamic_cast<const JPetTimeWindowMC* const>(fEvent);
+vector<JPetEvent> events;
+  
+for (uint i = 0; i < timeWindow->getNumberOfEvents(); i++) {
+fEnergy.clear();
+fTime.clear();
+fPosX.clear();
+fPosY.clear();
+fPosZ.clear();
+fHitType.clear();
+fVtxIndex.clear();
+
+const auto& event = dynamic_cast<const JPetEvent&>(timeWindow->operator[](i));		
+
+bool isMLParamsBefore = false;
+bool isMLParamsAfter5Hits = false;
+bool isMLParamsAfter3Hits = false;
+bool isMLParamsAfter2Hits = false;
+
+JPetEvent selectedEvent5 {};
+JPetEvent selectedEvent3 {};
+JPetEvent selectedEvent2 {};
+
+isMLParamsBefore = EventCategorizerTools::calculateMLParams(event, getStatistics(), fSaveControlHistos, "before");
+
 if (isMLParamsBefore)
-{
-isInitialCutPassed = EventCategorizerTools::checkForInitialCuts(event, getStatistics(), fSaveControlHistos, flowEnergyCut, fAnnihilationEnergyCut);
-}
+{				
+	std::vector<JPetHit> tempEvent5 = EventCategorizerTools::checkForInitialCuts(event, getStatistics(), fSaveControlHistos, flowEnergyCut, fAnnihilationEnergyCut, 5);	
+	selectedEvent5 = tempEvent5;
+	tempEvent5.clear();
 
-if (isInitialCutPassed && event.getHits().size() == 5)
-{
-isMLParamsAfter = EventCategorizerTools::calculateMLParamsAfter(event, getStatistics(), fSaveControlHistos); 
-}
+	std::vector<JPetHit> tempEvent3 = EventCategorizerTools::checkForInitialCuts(event, getStatistics(), fSaveControlHistos, flowEnergyCut, fAnnihilationEnergyCut, 3);	
+	selectedEvent3 = tempEvent3;
+	tempEvent3.clear();
 
-/*
-if(timeWindowMC)
-{
-   	isMLParamsBefore = EventCategorizerTools::calculateMLParamsBefore(event, getStatistics(), fSaveControlHistos);	
-	if(isMLParamsBefore)
-	{	
-		isInitialCutPassed = EventCategorizerTools::checkForInitialCuts(event, getStatistics(), fSaveControlHistos, flowEnergyCut, fAnnihilationEnergyCut);
+	std::vector<JPetHit> tempEvent2 = EventCategorizerTools::checkForInitialCuts(event, getStatistics(), fSaveControlHistos, flowEnergyCut, fAnnihilationEnergyCut, 2);	
+	selectedEvent2 = tempEvent2;
+	tempEvent2.clear();
+
+
+	if ( selectedEvent5.getHits().size() == 5){
+		isMLParamsAfter5Hits = EventCategorizerTools::calculateMLParams(selectedEvent5, getStatistics(), fSaveControlHistos, "after_5H");
 	}
 
-	if(isInitialCutPassed && event.getHits().size() == 5)
+	if( selectedEvent3.getHits().size() == 3)
 	{
-		isMLParamsAfter = EventCategorizerTools::calculateMLParamsAfter(event, getStatistics(), fSaveControlHistos); 
+	isMLParamsAfter3Hits = EventCategorizerTools::calculateMLParams(selectedEvent3, getStatistics(), fSaveControlHistos, "after_3H");
 	}
-}
-*/
+	
+	if( selectedEvent2.getHits().size() == 2)
+        {
+        isMLParamsAfter2Hits = EventCategorizerTools::calculateMLParams(selectedEvent2, getStatistics(), fSaveControlHistos, "after_2H");
+        }
+} 
+fEventNumber = i;
+fNumberOfHits = event.getHits().size();
+
 for(const auto & hit : event.getHits())
 {
+	
+	fPosX.push_back(hit.getPosX());
+	fPosY.push_back(hit.getPosY());
+	fPosZ.push_back(hit.getPosZ());
+	fEnergy.push_back(hit.getEnergy()); 
+	fTime.push_back(hit.getTime());
 	if(timeWindowMC)
 		{
 			auto mcHit = timeWindowMC->getMCHit<JPetMCHit>(hit.getMCindex());
-		        getStatistics().fillHistogram("True Energy", mcHit.getEnergy());
-		        getStatistics().fillHistogram("Gengamma_multi_all", mcHit.getGenGammaMultiplicity());
-		}
+			fHitType.push_back(mcHit.getGenGammaMultiplicity());
+			fVtxIndex.push_back(mcHit.getMCVtxIndex());
+			getStatistics().fillHistogram("True Energy", hit.getEnergy());		        			
+			getStatistics().fillHistogram("Gengamma_multi_all", mcHit.getGenGammaMultiplicity());					
+		} else {
+			fHitType.push_back(kUnknownEventType);	
+			fVtxIndex.push_back(0);
+		}  
 }
-
-getStatistics().fillHistogram("Multiplicity_all", event.getHits().size());
-		
-
+pTree22->Fill();
+fEnergy.clear();
+fTime.clear();
+fPosX.clear();
+fPosY.clear();
+fPosZ.clear();
+fHitType.clear();
+fVtxIndex.clear();
+/*	
+	if ( std::equal(fVtxIndex.begin() + 1, fVtxIndex.end(), fVtxIndex.begin()  ))
+	{	
+		fIsAcc = kFALSE;
+	} else {
+		fIsAcc = kTRUE;
+	}
+	for(auto i : fHitType){
+	auto number = i%10;
+	auto n = 1;
+	if(i%100!=0 && number!=0 && i>10)
+		fIsScattered=kTRUE;
+	if(number==1)
+		fContainsPrompt=kTRUE;
+	else if(number==2)
+		fIsPickOff=kTRUE;
+	else if(number==3)
+		fIsOPs=kTRUE;
+	else if(number==0){
+		fIsSecondary=kTRUE;	
+		while(number==0&&i>0){
+		n = n*10;
+		number = (i/n)%10;
+		if(i%n*100 == 0 && number!=0 && i/n>10)
+			fIsScattered=kTRUE;
+		if(number==1)
+			fContainsPrompt=kTRUE;
+		else if(number==2)
+			fIsPickOff=kTRUE;
+		else if(number==3)
+			fIsOPs=kTRUE;
+		}
+	}
+}
+	fIsSecondary = kFALSE;
+	fIsScattered = kFALSE;
+	fContainsPrompt = kFALSE;
+	fIsPickOff = kFALSE;
+	fIsOPs = kFALSE;
+*/
       // Check types of current event
       bool is2Gamma = EventCategorizerTools::checkFor2Gamma(
         event, getStatistics(), fSaveControlHistos, fB2BSlotThetaDiff, fMaxTimeDiff
@@ -161,13 +268,11 @@ getStatistics().fillHistogram("Multiplicity_all", event.getHits().size());
       if(isScattered) newEvent.addEventType(JPetEventType::kScattered);
 
       if(fSaveControlHistos){
-        for(auto hit : event.getHits()){
-          getStatistics().fillHistogram("All_XYpos", hit.getPosX(), hit.getPosY());
-		  getStatistics().fillHistogram("Energy_all", hit.getEnergy());
-		  
-
+  		for(auto hit : event.getHits()){	
+          	getStatistics().fillHistogram("All_XYpos", hit.getPosX(), hit.getPosY());
+	  	getStatistics().fillHistogram("Energy_all", hit.getEnergy());  
         }
-      }
+  }
       events.push_back(newEvent);
     }
     saveEvents(events);
@@ -177,8 +282,13 @@ getStatistics().fillHistogram("Multiplicity_all", event.getHits().size());
 
 bool EventCategorizer::terminate()
 {
+  INFO("FROM PARAMS: "+ std::to_string(fHitRequired) );
   INFO("Event categorization completed.");
-
+/*  if(!pTree22) std::cout << "wtf??" << std::endl;
+  file->cd();
+  pTree22->Write();
+  file->Write("",TObject::kWriteDelete);
+  file->Close();*/
   return true;
 }
 
@@ -194,58 +304,117 @@ void EventCategorizer::initialiseHistograms(){
     new TH2D("All_XYpos", "Hit position XY", 240, -60.25, 59.75, 240, -60.25, 59.75),
     "Hit X position [cm]", "Hit Y position [cm]"
   );
-////////////////for after
-getStatistics().createHistogramWithAxes(new TH1D("Hit_Multiplicity_after","Multiplicity of hits(with cuts)", 10, 0.5, 10.5), "No. of hits","counts");
- getStatistics().createHistogramWithAxes(new TH1D("M_ij", "Difference in hit time and time calculated by d/c(minimum)",3.0*fScatterTOFTimeDiff, -3.5*fScatterTOFTimeDiff-0.5, 3.0*fScatterTOFTimeDiff-0.5 ), "M_ij", "counts"); 
-  getStatistics().createHistogramWithAxes(new TH1D("TOF", "Time of flight",3.0*fScatterTOFTimeDiff, -3.0*fScatterTOFTimeDiff-0.5, 3.0*fScatterTOFTimeDiff-0.5 ), "TOF", "counts");
-  getStatistics().createHistogramWithAxes(new TH1D("3DOpenAngle", "3D opening angles",180, 0, 180 ), "Angle", "counts");
-  getStatistics().createHistogramWithAxes(new TH1D("2DOpenAngle", "2D opening angle", 360, 0, 360), "Angle", "counts");
-  getStatistics().createHistogramWithAxes(new TH1D("Theta", "Theta",100, 50, 150 ), "Angle", "counts");
-  getStatistics().createHistogramWithAxes(new TH1D("Phi", "Phi", 400, -200, 200),  "Angle", "counts");
-  getStatistics().createHistogramWithAxes(new TH1D("SmallestEnergy", "Smallest Energy",500, 0, 600 ), "smallest Energy", "counts");
-  getStatistics().createHistogramWithAxes(new TH1D("LargestEnergy", "Largest Energy", 500, 0, 1500), "Largest Energy", "counts");
-  getStatistics().createHistogramWithAxes(new TH1D("EnergySum", "Sum of energies of hits", 500, 0, 1500), "EnergySum", "counts");
-  getStatistics().createHistogramWithAxes(new TH1D("EnergySum-largest", "EnergySum-largest", 500, 0, 1500), "EnergySum-largest", "counts");
-  getStatistics().createHistogramWithAxes(new TH1D("EnergySum-Smallest", "EnergySum-Smallest",  500, 0, 1500), "EnergySum-Smallest", "counts");
-  getStatistics().createHistogramWithAxes(new TH1D("Hit_Z_POS(before)", "Hit_Z_POS(before)", 100, -50, 50), "Hit_Z_POS(before)", "counts");
-  getStatistics().createHistogramWithAxes(new TH1D("Energy(before)", "Energy(before)", 750, 0, 1200), "Energy(before)", "counts");
-  getStatistics().createHistogramWithAxes(new TH1D("Hit_Z_POS(after)", "Hit_Z_POS(after)", 100, -50, 50), "Hit_Z_POS(after)", "counts");
-  getStatistics().createHistogramWithAxes(new TH1D("Energy(after)", "Energy(after)", 500, 0, 800), "Energy(after)", "counts");
-  getStatistics().createHistogramWithAxes(new TH1D("Multiplicity_all","Multiplicity of all hits(without cut)", 10, 0.5, 10.5), "No. of hits","counts");
-  getStatistics().createHistogramWithAxes( new TH1D("Energy_all", "Energy of hits", 750, 0, 1200), "Energy(keV)", "counts");
-  getStatistics().createHistogramWithAxes( new TH1D("True Energy", "Energy of hits(true)", 750, 0, 1200), "Energy(keV)", "counts");
-  getStatistics().createHistogramWithAxes(new TH1D("Gengamma_multi_all", "Generated gamma multiplicity_all", 1000, 0.5, 10000.5), "No. of hits","counts");
 
 
-  //2d plots
+const std::string fix[4] = {"after_5H","after_3H" , "after_2H", "before"};
+for(int i = 0; i < 4; i++)
+{
+const std::string postfix = fix[i];
 
-getStatistics().createHistogramWithAxes(new TH2D("M_j_vs_distance", "M_ij_vs_distance(after)", 3.0*fScatterTOFTimeDiff, -0.5, 3.5*fScatterTOFTimeDiff-0.5, 150, 0, 150), "M_ij[ps]", "Distance[cm]");
+getStatistics().createHistogramWithAxes(new TH1D(
+("Hit_Multiplicity " + postfix).c_str(), "Multiplicity of hits(with cuts)",
+ 10, 0.5, 10.5), "No. of hits","counts");
 
-getStatistics().createHistogramWithAxes(new TH2D("M_j_vs_distanceB", "M_ij_vs_distance(before)", 3.0*fScatterTOFTimeDiff, -0.5, 3.5*fScatterTOFTimeDiff-0.5, 150, 0, 150), "M_ij[ps]", "Distance[cm]");
-  getStatistics().createHistogramWithAxes(new TH2D("TOF_vs_distance", "TOF_vs_distance", 3.0*fScatterTOFTimeDiff, -0.5, 3.0*fScatterTOFTimeDiff-0.5, 150, 0, 150), "TOF[ps]", "Distance[cm]");
- getStatistics().createHistogramWithAxes(new TH2D("TOF_vs_timeDifference", "TOF_vs_timeDifference", 5.0*fScatterTOFTimeDiff, -0.5*fScatterTOFTimeDiff, 5.0*fScatterTOFTimeDiff-0.5, 5.0*fScatterTOFTimeDiff, -0.5*fScatterTOFTimeDiff, 5.0*fScatterTOFTimeDiff-0.5), "TOF[ps]", "Time Difference[ps]" );
-  getStatistics().createHistogramWithAxes(new TH2D("EnergySum-Smallest_vs_EnergySum-largest", "EnergySum-Smallest_vs_EnergySum-largest", 500, 0, 1500, 500, 0, 1500), "Energy_sum -smallestE(keV)", "Energy_sum -largestE(keV)");
+getStatistics().createHistogramWithAxes(new TH1D(
+("TOF " + postfix).c_str(),"Time of flight",
+3.0*fScatterTOFTimeDiff, -3.0*fScatterTOFTimeDiff-0.5, 3.0*fScatterTOFTimeDiff-0.5 ), "TOF", "counts");
 
-  ///////////////////////////////////after/ends here
+getStatistics().createHistogramWithAxes(new TH2D(
+("M_ij_vs_distance " + postfix).c_str(),"M_ij_vs_distance",
+ 3.0*fScatterTOFTimeDiff, -3.5*fScatterTOFTimeDiff-0.5, 3.5*fScatterTOFTimeDiff-0.5, 150, 0, 150), "M_ij[ps]", "Distance[cm]");
 
-getStatistics().createHistogramWithAxes(new TH1D("Hit_Multiplicity_before","Multiplicity of hits(without cuts)", 10, 0.5, 10.5), "No. of hits","counts");
- getStatistics().createHistogramWithAxes(new TH1D("M_ijB", "Difference in hit time and time calculated by d/c(minimum)",3.0*fScatterTOFTimeDiff, -3.5*fScatterTOFTimeDiff-0.5, 3.0*fScatterTOFTimeDiff-0.5 ), "M_ij", "counts");
-  getStatistics().createHistogramWithAxes(new TH1D("TOFB", "Time of flight",3.0*fScatterTOFTimeDiff, -3.0*fScatterTOFTimeDiff-0.5, 3.0*fScatterTOFTimeDiff-0.5 ), "TOF", "counts");
-  getStatistics().createHistogramWithAxes(new TH1D("3DOpenAngleB", "3D opening angles",180, 0, 180 ), "Angle", "counts");
-  getStatistics().createHistogramWithAxes(new TH1D("2DOpenAngleB", "2D opening angle", 360, 0, 360), "Angle", "counts");
-  getStatistics().createHistogramWithAxes(new TH1D("ThetaB", "Theta",100, 50, 150 ), "Angle", "counts");
-  getStatistics().createHistogramWithAxes(new TH1D("PhiB", "Phi", 400, -200, 200),  "Angle", "counts");
-  getStatistics().createHistogramWithAxes(new TH1D("SmallestEnergyB", "Smallest Energy",500, 0, 600 ), "smallest Energy", "counts");
-  getStatistics().createHistogramWithAxes(new TH1D("LargestEnergyB", "Largest Energy", 500, 0, 1500), "Largest Energy", "counts");
-  getStatistics().createHistogramWithAxes(new TH1D("EnergySumB", "Sum of energies of hits", 500, 0, 1500), "EnergySum", "counts");
-  getStatistics().createHistogramWithAxes(new TH1D("EnergySum-largestB", "EnergySum-largest", 500, 0, 1500), "EnergySum-largest", "counts");
-  getStatistics().createHistogramWithAxes(new TH1D("EnergySum-SmallestB", "EnergySum-Smallest",  500, 0, 1500), "EnergySum-Smallest", "counts");
+getStatistics().createHistogramWithAxes(new TH2D(
+("TOF_vs_distance " + postfix).c_str(), "TOF_vs_distance",
+ 3.0*fScatterTOFTimeDiff, -3.0*fScatterTOFTimeDiff-0.5, 3.0*fScatterTOFTimeDiff-0.5, 150, 0, 150), "TOF[ps]", "Distance[cm]");
 
-  //2d plots
+getStatistics().createHistogramWithAxes(new TH2D(
+("TOF_vs_timeDifference " + postfix).c_str(), "TOF_vs_timeDifference",
+ 5.0*fScatterTOFTimeDiff, -5.0*fScatterTOFTimeDiff, 5.0*fScatterTOFTimeDiff-0.5, 5.0*fScatterTOFTimeDiff, -5.0*fScatterTOFTimeDiff, 5.0*fScatterTOFTimeDiff-0.5), "TOF[ps]", "Time Difference[ps]" );
 
-  getStatistics().createHistogramWithAxes(new TH2D("TOF_vs_distanceB", "TOF_vs_distance", 3.0*fScatterTOFTimeDiff, -0.5, 3.0*fScatterTOFTimeDiff-0.5, 150, 0, 150), "TOF[ps]", "Distance[cm]");
- getStatistics().createHistogramWithAxes(new TH2D("TOF_vs_timeDifferenceB", "TOF_vs_timeDifference", 5.0*fScatterTOFTimeDiff, -0.5*fScatterTOFTimeDiff, 5.0*fScatterTOFTimeDiff-0.5, 5.0*fScatterTOFTimeDiff, -0.5*fScatterTOFTimeDiff, 5.0*fScatterTOFTimeDiff-0.5), "TOF[ps]", "Time Difference[ps]" );
-  getStatistics().createHistogramWithAxes(new TH2D("EnergySum-Smallest_vs_EnergySum-largestB", "EnergySum-Smallest_vs_EnergySum-largest", 500, 0, 1500, 500, 0, 1500), "Energy_sum -smallestE(keV)", "Energy_sum -largestE(keV)");
+getStatistics().createHistogramWithAxes(new TH1D(
+("3DOpenAngle " + postfix).c_str(), "3D opening angles",
+180, 0, 180 ), "Angle", "counts");
+
+getStatistics().createHistogramWithAxes(new TH1D(
+("Theta " + postfix).c_str(), "Theta",
+100, 50, 150 ), "Angle", "counts");
+
+getStatistics().createHistogramWithAxes(new TH1D(
+("Phi " + postfix).c_str(), "Phi",
+ 200, -200, 200),  "Angle", "counts");
+
+getStatistics().createHistogramWithAxes(new TH1D(
+("M_ij " + postfix).c_str(), "Difference in hit time and time calculated by d/c(minimum)",
+3.0*fScatterTOFTimeDiff, -3.5*fScatterTOFTimeDiff-0.5, 3.0*fScatterTOFTimeDiff-0.5 ), "M_ij", "counts");
+
+getStatistics().createHistogramWithAxes(new TH1D(
+("Distance " + postfix).c_str(), "Distance between hits",
+150, 0, 150), "Distance between hits", "counts");
+
+getStatistics().createHistogramWithAxes(new TH1D(
+("M_ij_minimum " + postfix).c_str(), "MInimum of difference between hit time and time calculated by d/c(minimum)",
+3.0*fScatterTOFTimeDiff, -3.5*fScatterTOFTimeDiff-0.5, 3.0*fScatterTOFTimeDiff-0.5 ), "M_ij_min", "counts");
+
+getStatistics().createHistogramWithAxes(new TH1D(
+("M_ij_maximum " + postfix).c_str(), "Maximum of difference between hit time and time calculated by d/c(minimum)",
+3.0*fScatterTOFTimeDiff, -3.5*fScatterTOFTimeDiff-0.5, 3.0*fScatterTOFTimeDiff-0.5 ), "M_ij_max", "counts");
+
+
+getStatistics().createHistogramWithAxes(new TH1D(
+("SmallestEnergy " + postfix).c_str(), "Smallest Energy",
+500, 0, 1200 ), "smallest Energy", "counts");
+
+getStatistics().createHistogramWithAxes(new TH1D(
+("LargestEnergy " + postfix).c_str(), "Largest Energy", 
+500, 0, 1500), "Largest Energy", "counts");
+
+getStatistics().createHistogramWithAxes(new TH2D(
+("EnergySum-Smallest_vs_EnergySum-largest "+ postfix).c_str(),  "EnergySum-Smallest_vs_EnergySum-largest", 
+500, 0, 1500, 500, 0, 1500), "Energy_sum -smallestE(keV)", "Energy_sum -largestE(keV)");
+
+getStatistics().createHistogramWithAxes(new TH1D(
+("EnergySum-Smallest " + postfix).c_str(),"EnergySum-Smallest",
+  600, 0, 1200), "EnergySum-Smallest", "counts");
+
+getStatistics().createHistogramWithAxes(new TH1D(
+("EnergySum-largest " + postfix).c_str(), "EnergySum-largest", 500, 0, 1000),
+ "EnergySum-largest", "counts");
+
+getStatistics().createHistogramWithAxes(new TH1D(
+("EnergySum " + postfix).c_str(),  "Sum of energies of hits",
+ 500, 0, 1500), "EnergySum", "counts");
+
+}
+// HIstograms for general and initial cuts
+  getStatistics().createHistogramWithAxes(new TH1D(
+  "Hit_Z_POS(before)", "Hit_Z_POS(before)",
+  100, -50, 50), "Hit_Z_POS(before)", "counts");
+
+  getStatistics().createHistogramWithAxes(new TH1D(
+  "Energy(before)", "Energy(before)", 
+  750, 0, 1200), "Energy(before)", "counts");
+
+  getStatistics().createHistogramWithAxes(new TH1D(
+  "Hit_Z_POS(after)", "Hit_Z_POS(after)", 
+   100, -50, 50), "Hit_Z_POS(after)", "counts");
+
+  getStatistics().createHistogramWithAxes(new TH1D(
+  "Energy(after)", "Energy(after)",  
+   500, 0, 800), "Energy(after)", "counts");
+
+  getStatistics().createHistogramWithAxes( new TH1D( 
+  "Energy_all", "Energy of hits",
+   750, 0, 1200), "Energy(keV)", "counts");
+
+  getStatistics().createHistogramWithAxes( new TH1D(
+  "True Energy", "Energy of hits(true)",  
+  750, 0, 1200), "Energy(keV)", "counts");
+
+  getStatistics().createHistogramWithAxes(new TH1D(
+  "Gengamma_multi_all", "Generated gamma multiplicity_all",  
+   1000, 0.5, 10000.5), "No. of hits","counts");
+
+
   // Histograms for 2Gamma category
   getStatistics().createHistogramWithAxes(
     new TH1D("2Gamma_Zpos", "Z-axis position of 2 gamma hits", 201, -50.25, 50.25),
