@@ -23,10 +23,10 @@ int main(int argc, const char* argv[])
   try {
     JPetManager& manager = JPetManager::getManager();
     
-    manager.registerTask<EventFinder>("EventFinder");
+    //manager.registerTask<EventFinder>("EventFinder");
     manager.registerTask<EventAnalyzer>("EventAnalyzer");
     
-    manager.useTask("EventFinder", "hits", "unk.evt");
+   // manager.useTask("EventFinder", "hits", "unk.evt");
     manager.useTask("EventAnalyzer", "unk.evt", "ana.evt");
     
     manager.run(argc, argv);

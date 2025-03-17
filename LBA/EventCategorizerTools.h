@@ -1,0 +1,110 @@
+/**
+ *  @copyright Copyright 2020 The J-PET Framework Authors. All rights reserved.
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may find a copy of the License in the LICENCE file.
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ *
+ *  @file EventCategorizerTools.h
+ */
+
+#ifndef EVENTCATEGORIZERTOOLS_H
+#define EVENTCATEGORIZERTOOLS_H
+
+#include <JPetStatistics/JPetStatistics.h>
+#include <JPetEvent/JPetEvent.h>
+#include <JPetHit/JPetHit.h>
+#include <vector>
+
+static const double kLightVelocity_cm_ps = 0.0299792458;
+static const double kUndefinedValue = 999.0;
+
+//For data
+static const double fToTCutDeexMin = 100.0;
+static const double fToTCutDeexMax = 130.0;
+static const double fToTCutAnniMin = 0.0;
+static const double fToTCutAnniMax = 75.0;
+/*
+//For MC
+static const double fToTCutDeexMin = 0.6;
+static const double fToTCutDeexMax = 1.2;
+static const double fToTCutAnniMin = 0.0;
+static const double fToTCutAnniMax = 0.5;
+*/
+
+/**
+ * @brief Tools for Event Categorization
+ *
+ * Lots of tools in constatnt developement.
+*/
+class EventCategorizerTools
+{
+public:  
+  static bool checkFor2Gamma(const JPetEvent& event, JPetStatistics& stats,
+                           bool saveHistos, double b2bSlotThetaDiff, double b2bTimeDiff);
+  static bool checkFor3Gamma(const JPetEvent& event, JPetStatistics& stats, bool saveHistos);
+  static bool checkForPrompt(const JPetEvent& event, JPetStatistics& stats,
+                             bool saveHistos, double deexTOTCutMin, double deexTOTCutMax, 
+                             std::string fTOTCalculationType);
+  static bool checkForScatter(const JPetEvent& event, JPetStatistics& stats,
+                              bool saveHistos, double scatterTOFTimeDiff, 
+                              std::string fTOTCalculationType);
+  static std::vector<JPetHit> checkForInitialCuts(const JPetEvent& event, JPetStatistics& stats, bool saveHistos, double fLowEnergyCut, double fAnnihilationEnergyCut, int hitRequired);
+  static bool calculateMLParams(const JPetEvent& event, JPetStatistics& stats, bool saveHistos, const std::string& postfix);
+  static double calculateDistance(const JPetHit& hit1, const JPetHit& hit2);
+  static double calculateScatteringTime(const JPetHit& hit1, const JPetHit& hit2);
+  static double calculateScatteringAngle(const JPetHit& hit1, const JPetHit& hit2);
+  /// Tof is calculated as  time1 -time2.
+  static double calculateTOF(const JPetHit& hitA, const JPetHit& hitB);
+  static double calculateTOF(double time1, double time2);
+  /// Tof calculated with the ordered hits with respect to scintillator number.
+  /// The first one will be hit with smaller theta angle.
+  /// See also: http://koza.if.uj.edu.pl/petwiki/index.php/Coordinate_system_in_Big_Barrel
+
+  // cppcheck-suppress unusedFunction
+  static double calculate2DOpenAngles(const JPetHit& hit1, const JPetHit& hit2);
+  static double calculateTOFByConvention(const JPetHit& hitA, const JPetHit& hitB);
+  static TVector3 calculateAnnihilationPoint(const JPetHit& hitA, const JPetHit& hitB);
+  static TVector3 calculateAnnihilationPoint(const TVector3& hitA, const TVector3& hitB, double tof);
+  static double calculatePlaneCenterDistance(const JPetHit& firstHit,const JPetHit& secondHit, const JPetHit& thirdHit);
+  
+      
+  
+  /***************************************************** */
+  static double calcAngles(const JPetHit& hit1, const JPetHit& hit2);
+  static double calcET(const JPetHit& hit);
+  static bool Plots3hits(const JPetEvent& event, JPetStatistics& stats, const std::string& postfix);
+  static bool Plots2hits(const JPetEvent& event, JPetStatistics& stats, const std::string& postfix);
+  static bool Plots1hit(const JPetEvent& event, JPetStatistics& stats, const std::string& postfix);
+  
+  static bool checkForCut(const JPetEvent& event, JPetEvent& selEvent, int cutNr, int mp, double cut,
+  const std::string& plotPfix, bool (*funcCheck)(const JPetEvent&, JPetEvent&, double&), JPetStatistics& stats);
+
+  
+  static bool checkForCut2(const JPetEvent& event, JPetStatistics& stats, JPetEvent& sel2Event, int &m);
+  static bool checkForCut3(const JPetEvent& event, JPetStatistics& stats, JPetEvent& sel3Event, int &m);
+
+  static bool checkForCut5A(const JPetEvent& event, JPetEvent& sel5AEvent);
+  static bool checkForScat(const JPetEvent& event, JPetStatistics& stats, JPetEvent& selScEvent , int m);
+
+  static bool zTest(const JPetEvent& event, JPetEvent& zEvent, double& fZcut);
+  static bool totCheck(const JPetEvent& event, JPetEvent& totEvent, double totCutMin, double totCutMax);
+  static bool ScIDCheck(const JPetEvent& event, JPetEvent& scEvent);
+  static bool coplanarCheck(const JPetEvent& event, JPetEvent& CoPEvent, double& fDOP);
+  static bool emissionTimeSpreadCheck(const JPetEvent& event, JPetEvent& etsEvent, double& fETS);
+  static bool thetaCheck0(const JPetEvent& event, JPetEvent& ttEvent, double& fTT0);
+  static bool thetaCheck1(const JPetEvent& event, JPetEvent& ttEvent, double& fTT1);
+
+  static std::pair<bool, int> ETSTEST(const JPetEvent& event, JPetEvent& Event1, JPetEvent& Event2, JPetEvent& Event3);
+  static bool combinedCheck(const JPetEvent& event, JPetEvent& cmbEvent, double &val);
+  static bool checkForScatter(const JPetEvent& event, JPetEvent& selEvent, double cutValue);
+
+  
+};
+
+#endif /* !EVENTCATEGORIZERTOOLS_H */

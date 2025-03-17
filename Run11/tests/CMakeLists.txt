@@ -1,5 +1,5 @@
 message(STATUS "")
-message(STATUS "Starting to configure LargeBarrelAnalysisTests..")
+message(STATUS "Starting to configure MCA..")
 message(STATUS "")
 enable_testing()
 

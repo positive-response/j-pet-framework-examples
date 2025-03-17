@@ -20,106 +20,278 @@
 
 using namespace std;
 
-bool EventCategorizerTools::calculateMLParams(const JPetEvent& event, JPetStatistics& stats, bool saveHistos, const std::string& postfix)
-{
-int eventSize = event.getHits().size();
+bool EventCategorizerTools::Plots3hits(const JPetEvent& event, JPetStatistics& stats, const std::string& postfix){
+  if(event.getHits().size() < 3) return false;
+for (uint i = 0; i < event.getHits().size(); i++)
+    {
+      for (uint j = i + 1; j < event.getHits().size(); j++)
+      {
+        for (uint k = j + 1; k < event.getHits().size(); k++)
+        {
+          auto firstHit = event.getHits().at(i);
+	        auto secondHit = event.getHits().at(j);
+	        auto thirdHit = event.getHits().at(k);
 
-stats.fillHistogram(("Hit_Multiplicity " + postfix).c_str(), event.getHits().size());
+          std::vector<double> relativeAngles = {calcAngles(firstHit, secondHit), calcAngles(secondHit, thirdHit), calcAngles(thirdHit, firstHit)};
 
-double fTOF = 0.0;
-double fDistance = 0.0;
-double fTimeDiff = 0.0;
-double f3DOpenAngle = 0.0;
-double fSumEnergy = 0.0;
+          stats.fillHistogram(("relAngles12_23 " + postfix).c_str(), fabs(calcAngles(firstHit, secondHit)), fabs(calcAngles(secondHit, thirdHit)));  
+          std::sort(relativeAngles.begin(), relativeAngles.end());
 
-double smallestEnergy = std::numeric_limits<double>::max();
-double largestEnergy = std::numeric_limits<double>::lowest();
-
-std::vector<double> M(10);
-
-for(int hi = 0; hi < eventSize; hi++)
-{
-	JPetHit hit = event.getHits().at(hi);
-	double energy = hit.getEnergy();
-
-	if(energy < smallestEnergy){
-		smallestEnergy = energy; }
-	if(energy > largestEnergy){
-		largestEnergy = energy; }
-
-	fSumEnergy += energy;
-
-	stats.fillHistogram(("Theta " + postfix).c_str(), TMath::RadToDeg() * hit.getPos().Theta());
-	stats.fillHistogram(("Phi " + postfix).c_str(), TMath::RadToDeg() * hit.getPos().Phi());
+          double transformedX = relativeAngles.at(1) + relativeAngles.at(0);
+          double transformedY = relativeAngles.at(1) - relativeAngles.at(0);
+          stats.fillHistogram(("3g_rel_angles " + postfix).c_str(), transformedX, transformedY);
+        }
+      }
+    }
+  return true;
 }
 
-stats.fillHistogram(("SmallestEnergy " + postfix).c_str(), smallestEnergy);
-stats.fillHistogram(("LargestEnergy " + postfix).c_str(), largestEnergy);
-stats.fillHistogram(("EnergySum " + postfix).c_str(), fSumEnergy);
-stats.fillHistogram(("EnergySum-largest " + postfix).c_str(), fSumEnergy - largestEnergy);
-stats.fillHistogram(("EnergySum-Smallest " + postfix).c_str(), fSumEnergy - smallestEnergy);
-stats.fillHistogram(("EnergySum-Smallest_vs_EnergySum-largest "+ postfix).c_str(), fSumEnergy - smallestEnergy, fSumEnergy - largestEnergy);
+bool EventCategorizerTools::Plots2hits(const JPetEvent& event, JPetStatistics& stats, const std::string& postfix){
+if(event.getHits().size() < 3) return false;
+//std::vector<double> M(100);
+  for(int i = 0; i < event.getHits().size(); i++){
+      auto firstHit = event.getHits().at(i);
+    for(int j = i+1; j < event.getHits().size(); j++){
+      auto secondHit = event.getHits().at(j);
 
-fSumEnergy = 0.0;
-smallestEnergy = std::numeric_limits<double>::max();
-largestEnergy = std::numeric_limits<double>::lowest();
+      TVector3 ap = calculateAnnihilationPoint(firstHit, secondHit);
+      double fHitTimeDiff = (secondHit.getTime() - firstHit.getTime() );
+      double fTOF = calculateTOFByConvention(firstHit, secondHit);
+      double fDistance = calculateDistance(firstHit, secondHit);
+      double openAng = calcAngles(firstHit, secondHit);
+      double fTimeDiff = fTOF - fDistance/kLightVelocity_cm_ps;
+      //double fscatDist = abs(fDistance - fTOF);
+     // M.push_back(fTimeDiff);
 
+      stats.fillHistogram(("timeDiff " + postfix).c_str(), fHitTimeDiff);
+      stats.fillHistogram(("TOF " + postfix).c_str(), fTOF); 
+      stats.fillHistogram(("Distance " + postfix).c_str(), fDistance);
+      stats.fillHistogram(("openAngles " + postfix).c_str(), openAng);
 
-for(int i = 0; i < eventSize; i++){
-	for(int j = i+1 ; j < eventSize; j++){	
-		const auto& hitFirst = event.getHits().at(i);
-		const auto& hitSecond = event.getHits().at(j);
-		fTOF = EventCategorizerTools::calculateTOFByConvention(hitFirst, hitSecond);
-		fDistance = EventCategorizerTools::calculateDistance(hitFirst, hitSecond);
-		fTimeDiff = fTOF - fDistance/kLightVelocity_cm_ps;
-		f3DOpenAngle = EventCategorizerTools::calculateScatteringAngle(hitFirst, hitSecond);
+	    stats.fillHistogram(("timeDiff_vs_angle " + postfix).c_str(), fHitTimeDiff, openAng);
+      stats.fillHistogram(("Distance_vs_angle " + postfix).c_str(), fDistance, openAng);
+      stats.fillHistogram(("timeDiff_vs_Distance " + postfix).c_str(), fHitTimeDiff, fDistance);
+      
+      //for checking scattering
+      stats.fillHistogram(("M_ij " + postfix).c_str(), fTimeDiff);
+      //stats.fillHistogram(("MDist_vs_angle " + postfix).c_str(), fscatDist, openAng);
+      stats.fillHistogram(("Mdt_vs_angle " + postfix).c_str(), fTimeDiff, openAng);
 
-                M.push_back(fTimeDiff);
-		stats.fillHistogram(("M_ij " + postfix).c_str(), fTimeDiff);
-		stats.fillHistogram(("TOF " + postfix).c_str(), fTOF);
-		stats.fillHistogram(("Distance " + postfix).c_str(), fDistance);
-                stats.fillHistogram(("M_ij_vs_distance " + postfix).c_str(), fTimeDiff, fDistance);
-		stats.fillHistogram(("TOF_vs_distance " + postfix).c_str(), fTOF, fDistance);
-		stats.fillHistogram(("TOF_vs_timeDifference " + postfix).c_str(), fTOF,fTimeDiff);
-		stats.fillHistogram(("3DOpenAngle " + postfix).c_str(), f3DOpenAngle);
-	}
-}
-sort(M.begin(), M.end());
-stats.fillHistogram(("M_ij_minimum " + postfix).c_str(), M.front());
-stats.fillHistogram(("M_ij_maximum " + postfix).c_str(), M.back());
-M.clear();
+      stats.fillHistogram(("ap_XY " + postfix).c_str(), ap.X(), ap.Y() );
+      //stats.fillHistogram(("ap_XZ " + postfix).c_str(), ap.X(), ap.Z() );
+      //stats.fillHistogram(("ap_YZ " + postfix).c_str(), ap.Y(), ap.Z() );
+     // stats.fillHistogram(("TOF_vs_distance " + postfix).c_str(), fTOF, fDistance);
+     // stats.fillHistogram(("TOF_vs_timeDifference " + postfix).c_str(), fTOF,fTimeDiff);   
+      
+    }   
+  }
+   /*sort(M.begin(), M.end());
+   stats.fillHistogram(("M_ij_minimum " + postfix).c_str(), M.front());
+   stats.fillHistogram(("M_ij_maximum " + postfix).c_str(), M.back());
+   M.clear(); */
 return true;
 }
 
-/***********************
- *
- *Function for initial cuts
- *
- ***********************/
-std::vector<JPetHit> EventCategorizerTools::checkForInitialCuts(const JPetEvent& event, JPetStatistics& stats, bool saveHistos, double fLowEnergyCut, double fAnnihilationEnergyCut, int hitRequired)
+bool EventCategorizerTools::Plots1hit(const JPetEvent& event, JPetStatistics& stats, const std::string& postfix)
 {
-	int n = 0;
-	std::vector<JPetHit> selectedEvent;
-	for(auto & hit: event.getHits())
-	{
-		stats.fillHistogram("Hit_Z_POS(before)", hit.getPosZ());
-		stats.fillHistogram("Energy(before)", hit.getEnergy());
-		if(abs(hit.getPosZ()) < 23 && hit.getEnergy() < fAnnihilationEnergyCut && hit.getEnergy() > fLowEnergyCut)
-		{
-			n++;
-			selectedEvent.push_back(hit);
-			stats.fillHistogram("Hit_Z_POS(after)", hit.getPosZ());
-			stats.fillHistogram("Energy(after)", hit.getEnergy());
-		}
-		else	
-			continue;
-	}
-	if (n == hitRequired)
-		return selectedEvent;
-	else{
-		selectedEvent.clear();
-		return {};
-	}
+  if(event.getHits().size() < 3) return false;
+  double fSumEnergy = 0.0;
+  double smallestEnergy = std::numeric_limits<double>::max();
+  double largestEnergy = std::numeric_limits<double>::lowest();
+
+  for(int i = 0; i < event.getHits().size(); i++)
+  {
+    auto hit = event.getHits().at(i);
+    auto energy =  hit.getEnergy()/1000.0;
+
+    int scinID = hit.getScintillator().getID();
+
+    if(energy < smallestEnergy){smallestEnergy = energy;}
+	  if(energy > largestEnergy){largestEnergy = energy; }
+    
+    fSumEnergy += energy;
+
+    stats.fillHistogram( ("HM " + postfix).c_str(), event.getHits().size());
+    stats.fillHistogram(("TOT " + postfix).c_str(), energy);
+    stats.fillHistogram(("Z " + postfix).c_str(), hit.getPos().Z());
+   // stats.fillHistogram(("Phi " + postfix).c_str(),TMath::RadToDeg() * hit->getPos().Phi());
+   // stats.fillHistogram(("Theta " + postfix).c_str(), TMath::RadToDeg() * hit->getPos().Theta());
+    //stats.fillHistogram(("hit_XY " + postfix).c_str(), hit->getPos().X(), hit->getPos().Y() );
+    stats.fillHistogram(("scinID_VS_TOT " + postfix).c_str(), scinID, energy);
+  }
+   // stats.fillHistogram(("SmallestEnergy " + postfix).c_str(), smallestEnergy/1000);
+   // stats.fillHistogram(("LargestEnergy " + postfix).c_str(), largestEnergy/1000);
+  
+    stats.fillHistogram(("smallest_vs_largest " + postfix).c_str(), smallestEnergy, largestEnergy);
+    stats.fillHistogram(("EnergySum " + postfix).c_str(), fSumEnergy);
+    //stats.fillHistogram(("EnergySum-largest " + postfix).c_str(), (fSumEnergy - largestEnergy)/1000);
+    //stats.fillHistogram(("EnergySum-Smallest " + postfix).c_str(), (fSumEnergy - smallestEnergy)/1000);
+    stats.fillHistogram(("EnergySum-Smallest_vs_EnergySum-largest "+ postfix).c_str(), (fSumEnergy - smallestEnergy), (fSumEnergy - largestEnergy));
+
+    fSumEnergy = 0.0;
+    smallestEnergy = std::numeric_limits<double>::max();
+    largestEnergy = std::numeric_limits<double>::lowest();
+  return true;
+}
+
+/****************************************************** */
+bool EventCategorizerTools::zTest(const JPetEvent& event, JPetEvent& zEvent, int minC){
+ if(event.getHits().size() < 3) return false;
+ bool isZValid = false;
+  zEvent =  JPetEvent();
+  int count = 0;
+
+  for(auto & hit: event.getHits())
+  {
+    if(abs(hit.getPos().Z()) <= 23)
+    {
+      zEvent.addHit(hit);
+      count++;		
+    }
+    else
+      continue;
+  }
+  
+  if(count >= minC)
+  {
+    isZValid = true;
+  }
+  return isZValid;
+}
+
+bool EventCategorizerTools::totCheck(const JPetEvent& event, JPetEvent& totEvent, double totCutMin, double totCutMax, int atleastNHit){
+ if(event.getHits().size() < 3) return false;
+ int Count = 0;
+ totEvent = JPetEvent();
+
+ for(auto & hit: event.getHits()){
+     auto tot =  hit.getEnergy()/1000.0;
+     if(tot >= totCutMin && tot <= totCutMax ){ 
+      totEvent.addHit(hit);
+      Count++;
+      }
+   }
+ if (Count >= atleastNHit){ return true; }
+
+ return false;
+}
+
+bool EventCategorizerTools::ScIDCheck(const JPetEvent& event, JPetEvent& scEvent)
+{
+  if(event.getHits().size() < 3) return false;
+  std::set<int> addedHits;
+  scEvent = JPetEvent();
+
+  for(int i = 0; i < event.getHits().size(); i++)
+  {
+    for(int j = i+1; j < event.getHits().size(); j++)
+    {
+        auto hit1 = event.getHits().at(i);
+        auto hit2 = event.getHits().at(j);
+
+      auto scid1 = hit1.getScintillator().getID();
+      auto scid2 = hit2.getScintillator().getID();
+
+      if(scid1 == scid2){
+        if(hit1.getTime() < hit2.getTime()) 
+          {
+            if (addedHits.find(scid1) == addedHits.end()) 
+              {
+                scEvent.addHit(hit1);
+                addedHits.insert(scid1);            
+              }
+          }else if(hit1.getTime() > hit2.getTime()) 
+          {
+            if (addedHits.find(scid2) == addedHits.end()) 
+            {
+            scEvent.addHit(hit2);
+            addedHits.insert(scid2); 
+            }
+          }
+      }
+      else{
+        if (addedHits.find(scid1) == addedHits.end()) 
+        {
+          scEvent.addHit(hit1);
+          addedHits.insert(scid1);
+        }
+         if (addedHits.find(scid2) == addedHits.end())
+          {
+          scEvent.addHit(hit2);
+          addedHits.insert(scid2);
+        }
+      }
+      }
+    }
+    return true;
+  }
+
+
+
+bool EventCategorizerTools::checkForCut1(const JPetEvent& event, JPetStatistics& stats, JPetEvent& sel1Event)
+{ 
+  bool checkForZ = false;
+  JPetEvent zEvent;
+  int minHits = 1;
+  checkForZ = zTest(event, zEvent, minHits);
+  
+  if(checkForZ)
+  {
+    sel1Event = zEvent;
+    Plots1hit(zEvent, stats, "zCut");
+    Plots2hits(zEvent, stats, "zCut");
+    Plots3hits(zEvent, stats, "zCut");
+    return true;
+  }
+  return false;
+}
+
+
+bool EventCategorizerTools::checkForCut2(const JPetEvent& event, JPetStatistics& stats, JPetEvent& sel3Event, int n)
+{
+  bool totCheckDeexHits = false;
+  bool totCheckHits = false;
+  bool hitTypeSel = false;
+
+  JPetEvent totEventAnn;
+  JPetEvent totEventDeex;
+
+  totCheckDeexHits = totCheck(event, totEventDeex, fToTCutDeexMin, fToTCutDeexMax, 1);
+  totCheckHits = totCheck(event, totEventAnn, fToTCutAnniMin, fToTCutAnniMax, n);
+  
+  if (!totCheckDeexHits || !totCheckHits) 
+  {
+    return false;
+  }
+  
+  if(totCheckDeexHits && totCheckHits)
+  {
+    sel3Event = totEventAnn;
+
+    Plots3hits(totEventAnn, stats, "totCut");
+    Plots2hits(totEventAnn, stats, "totCut");
+    Plots1hit(totEventAnn, stats, "totCut");
+    return true;
+  }
+return false;
+}
+
+bool EventCategorizerTools::checkForCut3(const JPetEvent& event, JPetStatistics& stats, JPetEvent& sel3Event)
+{ 
+  bool checkForSC = false;
+  JPetEvent scEvent;
+  int minHits = 1;
+  checkForSC = ScIDCheck(event, scEvent);
+  
+  if(checkForSC)
+  {
+    sel3Event = scEvent;
+    Plots1hit(scEvent, stats, "SCCut");
+    Plots2hits(scEvent, stats, "SCCut");
+    Plots3hits(scEvent, stats, "SCCut");
+    return true;
+  }
+  return false;
 }
 
 /**
@@ -221,7 +393,7 @@ bool EventCategorizerTools::checkForPrompt(
                                               HitFinderTools::getTOTCalculationType(fTOTCalculationType));
     if (tot > deexTOTCutMin && tot < deexTOTCutMax) {
       if (saveHistos) {
-        stats.fillHistogram("Deex_TOT_cut", tot);
+        //stats.fillHistogram("Deex_TOT_cut", tot);
       }
       return true;
     }
@@ -288,7 +460,10 @@ double EventCategorizerTools::calculateScatteringTime(const JPetHit& hit1, const
 {
   return calculateDistance(hit1, hit2) / kLightVelocity_cm_ps;
 }
-
+double EventCategorizerTools::calcAngles(const JPetHit& hit1, const JPetHit& hit2)
+{
+   return (TMath::RadToDeg() * hit1.getPos().Angle(hit2.getPos()));
+}
 /**
 * Calculation of scatter angle between primary hit and scattered hit.
 * This function assumes that source of first gamma was in (0,0,0).

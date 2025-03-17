@@ -22,6 +22,10 @@
 #include <vector>
 static const double kLightVelocity_cm_ps = 0.0299792458;
 static const double kUndefinedValue = 999.0;
+static const double fToTCutDeexMin = 100.0;
+static const double fToTCutDeexMax = 130.0;
+static const double fToTCutAnniMin = 0.0;
+static const double fToTCutAnniMax = 75.0;
 
 /**
  * @brief Tools for Event Categorization
@@ -57,9 +61,24 @@ public:
   static double calculateTOFByConvention(const JPetHit& hitA, const JPetHit& hitB);
   static TVector3 calculateAnnihilationPoint(const JPetHit& hitA, const JPetHit& hitB);
   static TVector3 calculateAnnihilationPoint(const TVector3& hitA, const TVector3& hitB, double tof);
-  static double calculatePlaneCenterDistance(const JPetHit& firstHit,
-      const JPetHit& secondHit, const JPetHit& thirdHit);
+  static double calculatePlaneCenterDistance(const JPetHit& firstHit,const JPetHit& secondHit, const JPetHit& thirdHit);
+  
+      
+  
+  /***************************************************** */
+  static double calcAngles(const JPetHit& hit1, const JPetHit& hit2);
+  static bool Plots3hits(const JPetEvent& event, JPetStatistics& stats, const std::string& postfix);
+  static bool Plots2hits(const JPetEvent& event, JPetStatistics& stats, const std::string& postfix);
+  static bool Plots1hit(const JPetEvent& event, JPetStatistics& stats, const std::string& postfix);
+  static bool checkForCut1(const JPetEvent& event, JPetStatistics& stats, JPetEvent& sel1Event);
+  static bool checkForCut2(const JPetEvent& event, JPetStatistics& stats, JPetEvent& sel3Event, int n);
+  static bool checkForCut3(const JPetEvent& event, JPetStatistics& stats, JPetEvent& sel3Event);
 
+  static bool zTest(const JPetEvent& event, JPetEvent& zEvent, int minC);
+  static bool totCheck(const JPetEvent& event, JPetEvent& totEvent, double totCutMin, double totCutMax, int atleastNHit);
+  static bool ScIDCheck(const JPetEvent& event, JPetEvent& scEvent);
+
+  
 };
 
 #endif /* !EVENTCATEGORIZERTOOLS_H */
